@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKYHARA OS — ACCOUNTING APP</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0a;--bg2:#111;--bg3:#181818;--bg4:#1e1e1e;--border:#242424;--border2:#303030;--text:#e8e8e8;--muted:#555;--amber:#f5a623;--amber2:#c47d00;--amber-dim:#2a1c00;--green:#39ff14;--green-dim:#0a2200;--red:#ff3b3b;--red-dim:#2a0000;--blue:#4af0ff;--blue-dim:#001a2a;--purple:#b06fff;--purple-dim:#1a0a2a;--mono:'DM Mono',monospace;--display:'Bebas Neue',sans-serif;--r:2px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;overflow:hidden}
+button{cursor:pointer;font-family:var(--mono)}
+input,select,textarea{font-family:var(--mono);font-size:13px;color:var(--text);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;width:100%;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--amber)}
+select option{background:var(--bg3)}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);pointer-events:none;z-index:9999}
+#app{display:flex;flex-direction:column;height:100vh}
+/* TOPBAR */
+#topbar{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:48px;flex-shrink:0;gap:0;overflow-x:auto}
+.tb-brand{font-family:var(--display);font-size:22px;letter-spacing:3px;color:var(--amber);margin-right:20px;flex-shrink:0}
+.tb-sub{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-right:auto;flex-shrink:0}
+.tb-stat{display:flex;flex-direction:column;align-items:flex-end;margin-left:12px;padding-left:12px;border-left:1px solid var(--border);flex-shrink:0}
+.tb-stat-val{font-size:13px;color:var(--amber);font-weight:500}
+.tb-stat-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.tb-stat.g .tb-stat-val{color:var(--green)}
+.tb-stat.r .tb-stat-val{color:var(--red)}
+.tb-stat.b .tb-stat-val{color:var(--blue)}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);margin-left:12px;flex-shrink:0;transition:background .3s;cursor:help}
+.sync-dot.ok{background:var(--green)}
+.sync-dot.busy{background:var(--amber);animation:pulse .8s infinite}
+.sync-dot.err{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* NAV */
+#nav{display:flex;background:var(--bg2);border-bottom:2px solid var(--border);padding:0 12px;flex-shrink:0;overflow-x:auto}
+.nav-tab{padding:10px 14px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+.nav-tab.personal.active{color:var(--purple);border-bottom-color:var(--purple)}
+.nav-tab.insight.active{color:var(--green);border-bottom-color:var(--green)}
+/* MAIN */
+#main{flex:1;overflow-y:auto;padding:16px}
+.section{display:none}.section.active{display:block}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.page-title{font-family:var(--display);font-size:28px;letter-spacing:3px}
+.page-title span{color:var(--amber)}
+.page-title span.p{color:var(--purple)}
+.page-title span.g{color:var(--green)}
+/* BUTTONS */
+.btn{padding:8px 16px;border-radius:var(--r);font-size:11px;letter-spacing:2px;text-transform:uppercase;border:1px solid;transition:all .12s;font-weight:500}
+.btn-primary{background:var(--amber);color:#000;border-color:var(--amber)}
+.btn-primary:hover{background:var(--amber2)}
+.btn-ghost{background:transparent;color:var(--muted);border-color:var(--border2)}
+.btn-ghost:hover{color:var(--text)}
+.btn-danger{background:transparent;color:var(--red);border-color:var(--red-dim)}
+.btn-danger:hover{background:var(--red-dim)}
+.btn-purple{background:transparent;color:var(--purple);border-color:var(--purple-dim)}
+.btn-purple:hover{background:var(--purple-dim)}
+.btn-green{background:transparent;color:var(--green);border-color:rgba(57,255,20,.3)}
+.btn-green:hover{background:var(--green-dim)}
+.btn-sm{padding:5px 10px;font-size:10px}
+.btn-sync{background:transparent;color:var(--green);border-color:rgba(57,255,20,.3);font-size:10px;padding:6px 12px}
+.btn-sync:hover{background:var(--green-dim)}
+.btn-sync:disabled{opacity:.4;cursor:not-allowed}
+/* CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.order-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:border-color .12s}
+.order-card:hover{border-color:var(--border2)}
+.oc-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.oc-name{font-family:var(--display);font-size:18px;letter-spacing:2px;line-height:1}
+.oc-status{font-size:9px;letter-spacing:2px;padding:3px 8px;border-radius:var(--r);text-transform:uppercase}
+.s-active{background:var(--amber-dim);color:var(--amber)}
+.s-delivered{background:var(--green-dim);color:var(--green)}
+.s-pending{background:var(--bg4);color:var(--muted)}
+.oc-amounts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px}
+.oc-amt-label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.oc-amt-val{font-size:13px;font-weight:500}
+.oc-progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.oc-progress-bar{height:100%;background:var(--amber);transition:width .3s}
+.oc-progress-bar.danger{background:var(--red)}
+.oc-meta{display:flex;justify-content:space-between;margin-top:8px}
+.oc-meta-txt{font-size:10px;color:var(--muted)}
+/* TABLE */
+.exp-table{width:100%;border-collapse:collapse}
+.exp-table th{text-align:left;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)}
+.exp-table td{padding:8px 10px;border-bottom:1px solid var(--border);font-size:12px}
+.exp-table tr:hover td{background:var(--bg3)}
+.exp-table tr:last-child td{border-bottom:none}
+.tag{display:inline-block;padding:2px 8px;border-radius:var(--r);font-size:9px;letter-spacing:1px;text-transform:uppercase}
+.tag-raw{background:rgba(245,166,35,.15);color:var(--amber)}
+.tag-labor{background:rgba(57,255,20,.12);color:var(--green)}
+.tag-overhead{background:rgba(74,240,255,.12);color:var(--blue)}
+.tag-transport{background:rgba(176,111,255,.12);color:var(--purple)}
+.tag-other{background:var(--bg4);color:var(--muted)}
+.tag-school{background:rgba(74,240,255,.12);color:var(--blue)}
+.tag-grocery{background:rgba(57,255,20,.12);color:var(--green)}
+.tag-loan{background:rgba(255,59,59,.15);color:var(--red)}
+.tag-rent{background:rgba(176,111,255,.12);color:var(--purple)}
+.tag-medical{background:rgba(245,166,35,.15);color:var(--amber)}
+.tag-utility{background:var(--bg4);color:var(--muted)}
+.tag-personal-other{background:var(--bg4);color:var(--muted)}
+/* DASH */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+.dash-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.dash-card-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.dash-card-val{font-family:var(--display);font-size:28px;letter-spacing:2px;line-height:1}
+.dash-card-sub{font-size:10px;color:var(--muted);margin-top:4px}
+.insight-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px}
+.insight-card.warn{border-color:rgba(255,59,59,.3);background:rgba(255,59,59,.04)}
+.insight-card.good{border-color:rgba(57,255,20,.3);background:rgba(57,255,20,.04)}
+.insight-card.info{border-color:rgba(74,240,255,.3);background:rgba(74,240,255,.04)}
+.insight-card.amber{border-color:rgba(245,166,35,.3);background:rgba(245,166,35,.04)}
+.insight-icon{font-size:20px;margin-bottom:8px}
+.insight-title{font-family:var(--display);font-size:16px;letter-spacing:2px;margin-bottom:6px}
+.insight-body{font-size:11px;color:var(--muted);line-height:1.8}
+.insight-body strong{color:var(--text)}
+/* BREAKDOWN */
+.breakdown-list{display:flex;flex-direction:column;gap:8px}
+.breakdown-item{display:flex;align-items:center;gap:10px}
+.breakdown-label{font-size:11px;width:100px;flex-shrink:0}
+.breakdown-bar-wrap{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.breakdown-bar{height:100%;border-radius:3px;transition:width .4s}
+.breakdown-pct{font-size:10px;color:var(--muted);width:32px;text-align:right;flex-shrink:0}
+.breakdown-amt{font-size:11px;color:var(--text);width:80px;text-align:right;flex-shrink:0}
+/* LOAN CARD */
+.loan-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.loan-card.active-loan{border-color:rgba(255,59,59,.3)}
+.loan-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.loan-name{font-family:var(--display);font-size:16px;letter-spacing:2px}
+.loan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
+.loan-stat label{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:3px}
+.loan-stat span{font-size:13px;font-weight:500}
+.loan-progress{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:6px}
+.loan-progress-bar{height:100%;background:var(--red);border-radius:2px;transition:width .4s}
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);width:min(500px,95vw);max-height:90vh;overflow-y:auto;transform:translateY(10px);transition:transform .15s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+.modal-title{font-family:var(--display);font-size:20px;letter-spacing:2px}
+.modal-close{background:none;border:none;color:var(--muted);font-size:18px;padding:4px 8px;transition:color .1s;cursor:pointer}
+.modal-close:hover{color:var(--red)}
+.modal-body{padding:16px}
+.form-row{margin-bottom:14px}
+.form-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
+.form-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--border)}
+/* SETTINGS */
+.settings-panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;max-width:620px}
+.settings-panel h3{font-family:var(--display);font-size:18px;letter-spacing:2px;color:var(--amber);margin-bottom:16px}
+.conn-status{font-size:11px;padding:10px 14px;border-radius:var(--r);margin-top:10px;letter-spacing:1px}
+.conn-status.ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(57,255,20,.2)}
+.conn-status.fail{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,59,59,.2)}
+.conn-status.idle{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
+.sync-log{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px;font-size:10px;color:var(--muted);max-height:120px;overflow-y:auto;margin-top:8px}
+.log-line{margin-bottom:3px}
+.log-line.ok{color:var(--green)}.log-line.err{color:var(--red)}.log-line.info{color:var(--amber)}
+/* MISC */
+.sec-label{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.sec-label.purple{color:var(--purple);border-color:var(--purple-dim)}
+.sec-label.green{color:var(--green);border-color:rgba(57,255,20,.2)}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);font-size:11px;letter-spacing:2px;text-transform:uppercase}
+.empty-state .es-icon{font-size:36px;margin-bottom:12px;opacity:.3}
+#toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:10px 14px;font-size:11px;letter-spacing:1px;min-width:220px;animation:toastIn .2s ease}
+.toast.success{border-color:var(--green);color:var(--green)}
+.toast.error{border-color:var(--red);color:var(--red)}
+.toast.info{border-color:var(--amber);color:var(--amber)}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+/* MONTH SELECTOR */
+.month-selector{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.month-selector select{width:auto;font-size:11px;padding:5px 10px}
+/* CASHFLOW */
+.cashflow-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)}
+.cashflow-row:last-child{border-bottom:none}
+.cashflow-label{font-size:12px}
+.cashflow-val{font-size:13px;font-weight:500}
+.divider{height:1px;background:var(--border2);margin:12px 0}
+</style>
+</head>
+<body>
+
+<!-- PASSWORD GATE -->
+<div id="gate" style="position:fixed;inset:0;background:#0a0a0a;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:5px;color:#f5a623">SKYHARA OS</div>
+  <div style="font-size:10px;letter-spacing:3px;color:#444;text-transform:uppercase;margin-bottom:8px">APP — প্রাইভেট সিস্টেম</div>
+  <input id="gate-input" type="password" style="width:260px;padding:12px 16px;background:#111;border:1px solid #303030;border-radius:2px;color:#e8e8e8;font-family:'DM Mono',monospace;font-size:16px;outline:none;text-align:center;letter-spacing:6px" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkPass()">
+  <button onclick="checkPass()" style="padding:10px 32px;background:#f5a623;color:#000;border:none;border-radius:2px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;font-weight:600">প্রবেশ করো</button>
+  <div id="gate-err" style="font-size:11px;color:#ff3b3b;letter-spacing:1px;opacity:0;transition:opacity .2s">// পাসওয়ার্ড ভুল হয়েছে</div>
+</div>
+
+<div id="app">
+<!-- TOPBAR -->
+<div id="topbar">
+  <div class="tb-brand">SKYHARA OS</div>
+  <div class="tb-sub">ACCOUNTING APP</div>
+  <div class="tb-stat"><div class="tb-stat-val" id="sv-biz-profit">৳০</div><div class="tb-stat-label">ব্যবসায়িক লাভ</div></div>
+  <div class="tb-stat r" id="sv-personal-wrap"><div class="tb-stat-val" id="sv-personal">৳০</div><div class="tb-stat-label">ব্যক্তিগত খরচ</div></div>
+  <div class="tb-stat g" id="sv-net-wrap"><div class="tb-stat-val" id="sv-net">৳০</div><div class="tb-stat-label">হাতে থাকবে</div></div>
+  <div class="tb-stat b"><div class="tb-stat-val" id="sv-loan">৳০</div><div class="tb-stat-label">লোন বাকি</div></div>
+  <div class="sync-dot" id="sync-dot"></div>
+  <button class="btn btn-sync" id="sync-btn" onclick="manualSync()" style="margin-left:10px;flex-shrink:0">⟳ সিঙ্ক</button>
+</div>
+
+<!-- NAV -->
+<div id="nav">
+  <button class="nav-tab active" onclick="switchTab('dashboard')">ড্যাশবোর্ড</button>
+  <button class="nav-tab" onclick="switchTab('orders')">অর্ডার</button>
+  <button class="nav-tab" onclick="switchTab('expenses')">ব্যবসায়িক খরচ</button>
+  <button class="nav-tab personal" onclick="switchTab('personal')">ব্যক্তিগত খরচ</button>
+  <button class="nav-tab personal" onclick="switchTab('loans')">ব্যাংক লোন</button>
+  <button class="nav-tab insight" onclick="switchTab('insights')">স্মার্ট বিশ্লেষণ</button>
+  <button class="nav-tab" onclick="switchTab('report')">রিপোর্ট</button>
+  <button class="nav-tab" onclick="switchTab('settings')">সেটিংস</button>
+</div>
+
+<div id="main">
+
+<!-- ══ DASHBOARD ══ -->
+<div id="sec-dashboard" class="section active">
+  <div class="page-header">
+    <div class="page-title">ড্যাশ<span>বোর্ড</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-sync" onclick="manualSync()">⟳ Sheets সিঙ্ক</button>
+      <button class="btn btn-purple btn-sm" onclick="openPersonalModal()">+ ব্যক্তিগত খরচ</button>
+      <button class="btn btn-primary" onclick="openExpenseModal()">+ ব্যবসায়িক খরচ</button>
+    </div>
+  </div>
+
+  <!-- MASTER SUMMARY -->
+  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:16px;margin-bottom:16px">
+    <div class="sec-label" style="margin-bottom:12px">// মাসিক সামগ্রিক চিত্র</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px" id="master-summary"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <!-- Business breakdown -->
+    <div>
+      <div class="sec-label">ব্যবসায়িক খরচ বিশ্লেষণ</div>
+      <div class="breakdown-list" id="biz-breakdown"></div>
+    </div>
+    <!-- Personal breakdown -->
+    <div>
+      <div class="sec-label purple">ব্যক্তিগত খরচ বিশ্লেষণ</div>
+      <div class="breakdown-list" id="personal-breakdown"></div>
+    </div>
+  </div>
+
+  <!-- CASH FLOW STATEMENT -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px">
+    <div class="sec-label green">// নগদ প্রবাহ (Cash Flow)</div>
+    <div id="cashflow-body"></div>
+  </div>
+
+  <!-- RECENT -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div class="sec-label">সাম্প্রতিক ব্যবসায়িক খরচ</div>
+      <table class="exp-table"><thead><tr><th>তারিখ</th><th>ধরন</th><th style="text-align:right">টাকা</th></tr></thead><tbody id="dash-biz-recent"></tbody></table>
+    </div>
+    <div>
+      <div class="sec-label purple">সাম্প্রতিক ব্যক্তিগত খরচ</div>
+      <table class="exp-table"><thead><tr><th>তারিখ</th><th>ধরন</th><th style="text-align:right">টাকা</th></tr></thead><tbody id="dash-personal-recent"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ORDERS ══ -->
+<div id="sec-orders" class="section">
+  <div class="page-header">
+    <div class="page-title">অর্<span>ডার</span></div>
+    <button class="btn btn-primary" onclick="openOrderModal()">+ নতুন অর্ডার</button>
+  </div>
+  <div class="cards-grid" id="orders-grid"></div>
+</div>
+
+<!-- ══ BUSINESS EXPENSES ══ -->
+<div id="sec-expenses" class="section">
+  <div class="page-header">
+    <div class="page-title">ব্যবসায়িক <span>খরচ</span></div>
+    <button class="btn btn-primary" onclick="openExpenseModal()">+ নতুন খরচ</button>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--amber-dim);border-radius:var(--r);padding:14px;margin-bottom:16px">
+    <div class="sec-label" style="color:var(--amber);border-color:var(--amber-dim)">⚡ দ্রুত এন্ট্রি</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+      <div><label class="form-label">অর্ডার</label><select id="qe-order"><option value="">-- সাধারণ --</option></select></div>
+      <div><label class="form-label">ধরন</label><select id="qe-type"><option>কাঁচামাল</option><option>মজুরি</option><option>ওভারহেড</option><option>পরিবহন</option><option>অন্যান্য</option></select></div>
+      <div><label class="form-label">পরিমাণ (৳)</label><input type="number" id="qe-amount" placeholder="০"></div>
+      <div><label class="form-label">নোট</label><input type="text" id="qe-note" placeholder="ঐচ্ছিক..."></div>
+      <div><button class="btn btn-primary btn-sm" onclick="quickAddExpense()">সেভ</button></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px">
+    <select id="filter-order" onchange="renderExpensesTable()" style="width:auto"><option value="">সব অর্ডার</option></select>
+    <select id="filter-type" onchange="renderExpensesTable()" style="width:auto"><option value="">সব ধরন</option><option>কাঁচামাল</option><option>মজুরি</option><option>ওভারহেড</option><option>পরিবহন</option><option>অন্যান্য</option></select>
+  </div>
+  <table class="exp-table"><thead><tr><th>তারিখ</th><th>অর্ডার</th><th>ধরন</th><th>নোট</th><th style="text-align:right">পরিমাণ</th><th></th></tr></thead><tbody id="exp-table-body"></tbody></table>
+</div>
+
+<!-- ══ PERSONAL EXPENSES ══ -->
+<div id="sec-personal" class="section">
+  <div class="page-header">
+    <div class="page-title">ব্যক্তিগত <span class="p">খরচ</span></div>
+    <button class="btn btn-purple" onclick="openPersonalModal()">+ নতুন খরচ</button>
+  </div>
+
+  <!-- QUICK ENTRY PERSONAL -->
+  <div style="background:var(--bg2);border:1px solid var(--purple-dim);border-radius:var(--r);padding:14px;margin-bottom:16px">
+    <div class="sec-label purple">⚡ দ্রুত এন্ট্রি</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:8px;align-items:end">
+      <div><label class="form-label">ধরন</label>
+        <select id="qp-type">
+          <option>স্কুল ফি</option><option>বাজার/মুদিখানা</option><option>ব্যাংক লোন EMI</option>
+          <option>বাড়ি ভাড়া</option><option>বিদ্যুৎ/গ্যাস/পানি</option><option>চিকিৎসা</option>
+          <option>যানবাহন</option><option>পোশাক</option><option>বিনোদন</option><option>অন্যান্য</option>
+        </select>
+      </div>
+      <div><label class="form-label">পরিমাণ (৳)</label><input type="number" id="qp-amount" placeholder="০"></div>
+      <div><label class="form-label">মাস</label><input type="month" id="qp-month"></div>
+      <div><label class="form-label">নোট</label><input type="text" id="qp-note" placeholder="ঐচ্ছিক..."></div>
+      <div><button class="btn btn-purple btn-sm" onclick="quickAddPersonal()">সেভ</button></div>
+    </div>
+  </div>
+
+  <!-- MONTHLY SUMMARY -->
+  <div id="personal-monthly-summary" style="margin-bottom:16px"></div>
+
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+    <div class="sec-label" style="margin-bottom:0;border-bottom:none">ফিল্টার:</div>
+    <select id="filter-personal-type" onchange="renderPersonalTable()" style="width:auto"><option value="">সব ধরন</option><option>স্কুল ফি</option><option>বাজার/মুদিখানা</option><option>ব্যাংক লোন EMI</option><option>বাড়ি ভাড়া</option><option>বিদ্যুৎ/গ্যাস/পানি</option><option>চিকিৎসা</option><option>যানবাহন</option><option>পোশাক</option><option>বিনোদন</option><option>অন্যান্য</option></select>
+    <select id="filter-personal-month" onchange="renderPersonalTable()" style="width:auto"><option value="">সব মাস</option></select>
+  </div>
+  <table class="exp-table"><thead><tr><th>মাস</th><th>ধরন</th><th>নোট</th><th style="text-align:right">পরিমাণ</th><th></th></tr></thead><tbody id="personal-table-body"></tbody></table>
+</div>
+
+<!-- ══ LOANS ══ -->
+<div id="sec-loans" class="section">
+  <div class="page-header">
+    <div class="page-title">ব্যাংক <span class="p">লোন</span></div>
+    <button class="btn btn-purple" onclick="openLoanModal()">+ নতুন লোন</button>
+  </div>
+
+  <div id="loans-summary" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px"></div>
+
+  <div class="sec-label purple">সক্রিয় লোন</div>
+  <div id="loans-list"></div>
+
+  <div class="sec-label" style="margin-top:20px">লোন পেমেন্ট ইতিহাস</div>
+  <table class="exp-table"><thead><tr><th>তারিখ</th><th>লোন</th><th>ধরন</th><th>নোট</th><th style="text-align:right">পরিমাণ</th><th></th></tr></thead><tbody id="loan-payments-body"></tbody></table>
+</div>
+
+<!-- ══ SMART INSIGHTS ══ -->
+<div id="sec-insights" class="section">
+  <div class="page-header">
+    <div class="page-title">স্মার্ট <span class="g">বিশ্লেষণ</span></div>
+    <button class="btn btn-green btn-sm" onclick="renderInsights()">↻ রিফ্রেশ</button>
+  </div>
+  <div id="insights-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px"></div>
+</div>
+
+<!-- ══ REPORT ══ -->
+<div id="sec-report" class="section">
+  <div class="page-header">
+    <div class="page-title">রি<span>পোর্ট</span></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="exportCSV()">CSV ডাউনলোড</button>
+      <button class="btn btn-sync" onclick="manualSync()">⟳ Sheets-এ সেভ</button>
+    </div>
+  </div>
+  <div id="report-content"></div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div id="sec-settings" class="section">
+  <div class="page-header"><div class="page-title">সেটিং<span>স</span></div></div>
+  <div class="settings-panel">
+    <h3>// Google Sheets সংযোগ</h3>
+    <div style="margin-bottom:14px">
+      <label class="form-label">Apps Script Web App URL</label>
+      <input type="url" id="script-url" placeholder="https://script.google.com/macros/s/..." oninput="onUrlInput()">
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.8">Deploy settings: Execute as: <u>Me</u> | Who has access: <u>Anyone</u></div>
+    </div>
+    <div class="conn-status idle" id="conn-status">// URL দেওয়া হয়নি</div>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn btn-sync" onclick="testConnection()">সংযোগ পরীক্ষা</button>
+      <button class="btn btn-primary" onclick="manualSync()">সব ডেটা Sheets-এ পাঠাও</button>
+      <button class="btn btn-ghost btn-sm" onclick="pullFromSheets()">⬇ Sheets থেকে লোড</button>
+    </div>
+    <div style="margin-top:12px">
+      <div class="sec-label">সিঙ্ক লগ</div>
+      <div class="sync-log" id="sync-log"><div class="log-line info">// লগ এখানে দেখাবে...</div></div>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <h3>// পাসওয়ার্ড পরিবর্তন</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-top:12px">
+        <div><label class="form-label">নতুন পাসওয়ার্ড</label><input type="password" id="new-pass" placeholder="নতুন পাসওয়ার্ড"></div>
+        <div><label class="form-label">নিশ্চিত করো</label><input type="password" id="confirm-pass" placeholder="আবার দিন"></div>
+        <button class="btn btn-primary btn-sm" onclick="changePassword()">সেভ</button>
+      </div>
+    </div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <h3>// ডেটা ব্যবস্থাপনা</h3>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="exportJSON()">JSON ব্যাকআপ</button>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('import-file').click()">JSON ইম্পোর্ট</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAllData()">সব ডেটা মুছো</button>
+      </div>
+      <input type="file" id="import-file" accept=".json" style="display:none" onchange="handleImport(event)">
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ORDER MODAL -->
+<div class="modal-overlay" id="order-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="order-modal-title">নতুন অর্ডার</div><button class="modal-close" onclick="closeModal('order-modal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="order-edit-id">
+      <div class="form-row"><label class="form-label">ক্লায়েন্টের নাম *</label><input type="text" id="order-client" placeholder="ABC কর্পোরেশন"></div>
+      <div class="form-row-2">
+        <div><label class="form-label">অর্ডার মূল্য (৳) *</label><input type="number" id="order-value" placeholder="০"></div>
+        <div><label class="form-label">স্ট্যাটাস</label><select id="order-status"><option value="active">চলছে</option><option value="delivered">ডেলিভারি হয়েছে</option><option value="pending">পেমেন্ট বাকি</option></select></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">অর্ডারের তারিখ</label><input type="date" id="order-date"></div>
+        <div><label class="form-label">ডেলিভারির তারিখ</label><input type="date" id="order-delivery"></div>
+      </div>
+      <div class="form-row"><label class="form-label">পণ্যের বিবরণ</label><textarea id="order-desc" rows="2" placeholder="ওয়ালেট ৫০০ পিস..."></textarea></div>
+      <div class="form-row"><label class="form-label">পেমেন্ট</label><select id="order-paid"><option value="no">না — বাকি আছে</option><option value="partial">আংশিক</option><option value="yes">সম্পূর্ণ পেয়েছি</option></select></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('order-modal')">বাতিল</button><button class="btn btn-primary" onclick="saveOrder()">সেভ করো</button></div>
+  </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">ব্যবসায়িক খরচ</div><button class="modal-close" onclick="closeModal('expense-modal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="exp-edit-id">
+      <div class="form-row"><label class="form-label">কোন অর্ডারের?</label><select id="exp-order"><option value="">-- সাধারণ ব্যবসায়িক খরচ --</option></select></div>
+      <div class="form-row-2">
+        <div><label class="form-label">খরচের ধরন *</label><select id="exp-type"><option>কাঁচামাল</option><option>মজুরি</option><option>ওভারহেড</option><option>পরিবহন</option><option>অন্যান্য</option></select></div>
+        <div><label class="form-label">পরিমাণ (৳) *</label><input type="number" id="exp-amount" placeholder="০"></div>
+      </div>
+      <div class="form-row"><label class="form-label">তারিখ</label><input type="date" id="exp-date"></div>
+      <div class="form-row"><label class="form-label">নোট</label><textarea id="exp-note" rows="2" placeholder="বিস্তারিত..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('expense-modal')">বাতিল</button><button class="btn btn-primary" onclick="saveExpense()">সেভ করো</button></div>
+  </div>
+</div>
+
+<!-- PERSONAL MODAL -->
+<div class="modal-overlay" id="personal-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" style="color:var(--purple)">ব্যক্তিগত খরচ</div><button class="modal-close" onclick="closeModal('personal-modal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="per-edit-id">
+      <div class="form-row-2">
+        <div><label class="form-label">ধরন *</label>
+          <select id="per-type">
+            <option>স্কুল ফি</option><option>বাজার/মুদিখানা</option><option>ব্যাংক লোন EMI</option>
+            <option>বাড়ি ভাড়া</option><option>বিদ্যুৎ/গ্যাস/পানি</option><option>চিকিৎসা</option>
+            <option>যানবাহন</option><option>পোশাক</option><option>বিনোদন</option><option>অন্যান্য</option>
+          </select>
+        </div>
+        <div><label class="form-label">পরিমাণ (৳) *</label><input type="number" id="per-amount" placeholder="০"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">মাস *</label><input type="month" id="per-month"></div>
+        <div><label class="form-label">তারিখ</label><input type="date" id="per-date"></div>
+      </div>
+      <div class="form-row"><label class="form-label">নোট</label><textarea id="per-note" rows="2" placeholder="বিস্তারিত..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('personal-modal')">বাতিল</button><button class="btn btn-purple" onclick="savePersonal()">সেভ করো</button></div>
+  </div>
+</div>
+
+<!-- LOAN MODAL -->
+<div class="modal-overlay" id="loan-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="loan-modal-title" style="color:var(--purple)">নতুন লোন</div><button class="modal-close" onclick="closeModal('loan-modal')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="loan-edit-id">
+      <div class="form-row"><label class="form-label">লোনের নাম / ব্যাংক *</label><input type="text" id="loan-name" placeholder="যেমন: ব্র্যাক ব্যাংক বিজনেস লোন"></div>
+      <div class="form-row-2">
+        <div><label class="form-label">মোট লোনের পরিমাণ (৳) *</label><input type="number" id="loan-total" placeholder="০"></div>
+        <div><label class="form-label">মাসিক EMI (৳) *</label><input type="number" id="loan-emi" placeholder="০"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">শুরুর তারিখ</label><input type="date" id="loan-start"></div>
+        <div><label class="form-label">সুদের হার (%)</label><input type="number" id="loan-rate" placeholder="যেমন: 9.5" step="0.1"></div>
+      </div>
+      <div class="form-row"><label class="form-label">মেয়াদ (মাস)</label><input type="number" id="loan-tenure" placeholder="যেমন: 36"></div>
+      <div class="form-row"><label class="form-label">নোট</label><textarea id="loan-note" rows="2" placeholder="বিস্তারিত..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('loan-modal')">বাতিল</button><button class="btn btn-purple" onclick="saveLoan()">সেভ করো</button></div>
+  </div>
+</div>
+
+<!-- LOAN PAYMENT MODAL -->
+<div class="modal-overlay" id="loan-payment-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" style="color:var(--red)">লোন পেমেন্ট</div><button class="modal-close" onclick="closeModal('loan-payment-modal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label class="form-label">লোন</label><select id="lp-loan"></select></div>
+      <div class="form-row-2">
+        <div><label class="form-label">পেমেন্টের ধরন</label><select id="lp-type"><option value="emi">মাসিক EMI</option><option value="extra">অতিরিক্ত পেমেন্ট</option></select></div>
+        <div><label class="form-label">পরিমাণ (৳) *</label><input type="number" id="lp-amount" placeholder="০"></div>
+      </div>
+      <div class="form-row"><label class="form-label">তারিখ</label><input type="date" id="lp-date"></div>
+      <div class="form-row"><label class="form-label">নোট</label><input type="text" id="lp-note" placeholder="ঐচ্ছিক..."></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('loan-payment-modal')">বাতিল</button><button class="btn btn-danger" onclick="saveLoanPayment()">পেমেন্ট সেভ করো</button></div>
+  </div>
+</div>
+
+<!-- ORDER DETAIL MODAL -->
+<div class="modal-overlay" id="order-detail-modal">
+  <div class="modal" style="width:min(700px,97vw)">
+    <div class="modal-header"><div class="modal-title" id="odm-title">অর্ডার</div><button class="modal-close" onclick="closeModal('order-detail-modal')">✕</button></div>
+    <div class="modal-body" id="odm-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" id="odm-edit-btn">সম্পাদনা</button>
+      <button class="btn btn-danger btn-sm" id="odm-delete-btn">মুছো</button>
+      <button class="btn btn-primary btn-sm" onclick="openExpenseFromOrder()">+ খরচ যোগ করো</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script>
+/* ══════════════════════════════════════════
+   SKYHARA OS v3 — COMPLETE ENGINE
+   Business + Personal + Loans + Smart Insights
+══════════════════════════════════════════ */
+const KEY = 'skyhara_v3';
+const URL_KEY = 'skyhara_script_url';
+const PASS_KEY = 'skyhara_pass';
+const AUTH_KEY = 'skyhara_auth';
+
+let db = { orders:[], expenses:[], personal:[], loans:[], loanPayments:[] };
+let currentOrderId = null;
+let syncTimer = null;
+
+/* ── BOOT ── */
+function boot() {
+  const raw = localStorage.getItem(KEY);
+  if (raw) { try { db = {...db,...JSON.parse(raw)}; } catch(e){} }
+  // ensure all arrays exist
+  ['orders','expenses','personal','loans','loanPayments'].forEach(k=>{ if(!db[k]) db[k]=[]; });
+  const url = localStorage.getItem(URL_KEY);
+  if (url) { document.getElementById('script-url').value = url; setConnStatus('idle','// URL সেট আছে'); }
+  // set today defaults
+  const t = today();
+  const m = t.slice(0,7);
+  ['exp-date','per-date','lp-date','loan-start'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=t; });
+  ['qp-month','per-month'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=m; });
+  renderDashboard();
+  populateDropdowns();
+}
+
+function persist() {
+  localStorage.setItem(KEY, JSON.stringify(db));
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(()=>autoSync(), 5000);
+}
+
+/* ── UTILS ── */
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const today = () => new Date().toISOString().split('T')[0];
+const thisMonth = () => today().slice(0,7);
+const fmt = n => '৳'+(Number(n)||0).toLocaleString('en-IN');
+const fmtD = d => { if(!d||d==='undefined') return '—'; const p=d.split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d; };
+const getUrl = () => localStorage.getItem(URL_KEY)||'';
+const orderExp = id => db.expenses.filter(e=>e.orderId===id);
+const orderTotal = id => orderExp(id).reduce((s,e)=>s+Number(e.amount),0);
+
+function typeTag(t, personal=false) {
+  if(personal) {
+    const m={'স্কুল ফি':'tag-school','বাজার/মুদিখানা':'tag-grocery','ব্যাংক লোন EMI':'tag-loan','বাড়ি ভাড়া':'tag-rent','বিদ্যুৎ/গ্যাস/পানি':'tag-utility','চিকিৎসা':'tag-medical','যানবাহন':'tag-transport'};
+    return `<span class="tag ${m[t]||'tag-personal-other'}">${t}</span>`;
+  }
+  const m={কাঁচামাল:'tag-raw',মজুরি:'tag-labor',ওভারহেড:'tag-overhead',পরিবহন:'tag-transport',অন্যান্য:'tag-other'};
+  return `<span class="tag ${m[t]||'tag-other'}">${t}</span>`;
+}
+function statusBadge(s) {
+  const m={active:['s-active','চলছে'],delivered:['s-delivered','ডেলিভারি'],pending:['s-pending','পেমেন্ট বাকি']};
+  const [c,l]=m[s]||m.active; return `<span class="oc-status ${c}">${l}</span>`;
+}
+function paidLabel(p) {
+  const m={yes:['var(--green)','✓ পেয়েছি'],partial:['var(--amber)','~ আংশিক'],no:['var(--red)','✗ বাকি']};
+  const [c,l]=m[p]||m.no; return `<span style="color:${c};font-size:11px">${l}</span>`;
+}
+
+/* ── LOAN COMPUTED ── */
+function loanPaid(loanId) {
+  return db.loanPayments.filter(p=>p.loanId===loanId).reduce((s,p)=>s+Number(p.amount),0);
+}
+function loanRemaining(loan) {
+  return Math.max(0, Number(loan.total) - loanPaid(loan.id));
+}
+function totalLoanOutstanding() {
+  return db.loans.filter(l=>loanRemaining(l)>0).reduce((s,l)=>s+loanRemaining(l),0);
+}
+
+/* ── TOPBAR ── */
+function updateTopbar() {
+  const bizRev = db.orders.reduce((s,o)=>s+Number(o.value),0);
+  const bizExp = db.expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const bizProfit = bizRev - bizExp;
+  const personalTotal = db.personal.reduce((s,p)=>s+Number(p.amount),0);
+  const net = bizProfit - personalTotal;
+  const loanOut = totalLoanOutstanding();
+  document.getElementById('sv-biz-profit').textContent = fmt(bizProfit);
+  document.getElementById('sv-personal').textContent = fmt(personalTotal);
+  document.getElementById('sv-net').textContent = fmt(net);
+  document.getElementById('sv-loan').textContent = fmt(loanOut);
+  document.getElementById('sv-net-wrap').className = 'tb-stat '+(net>=0?'g':'r');
+}
+
+/* ══ DASHBOARD ══ */
+function renderDashboard() {
+  updateTopbar();
+  const bizRev = db.orders.reduce((s,o)=>s+Number(o.value),0);
+  const bizExp = db.expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const bizProfit = bizRev-bizExp;
+  const personalTotal = db.personal.reduce((s,p)=>s+Number(p.amount),0);
+  const net = bizProfit-personalTotal;
+  const loanOut = totalLoanOutstanding();
+  const pendingPayment = db.orders.filter(o=>o.paid!=='yes').reduce((s,o)=>s+Number(o.value),0);
+
+  document.getElementById('master-summary').innerHTML = `
+    <div class="dash-card"><div class="dash-card-label">ব্যবসায়িক আয়</div><div class="dash-card-val" style="color:var(--amber)">${fmt(bizRev)}</div><div class="dash-card-sub">${db.orders.length}টি অর্ডার</div></div>
+    <div class="dash-card"><div class="dash-card-label">ব্যবসায়িক লাভ</div><div class="dash-card-val" style="color:${bizProfit>=0?'var(--green)':'var(--red)'}">${fmt(bizProfit)}</div><div class="dash-card-sub">খরচ ${fmt(bizExp)}</div></div>
+    <div class="dash-card"><div class="dash-card-label">ব্যক্তিগত খরচ</div><div class="dash-card-val" style="color:var(--purple)">${fmt(personalTotal)}</div><div class="dash-card-sub">${db.personal.length}টি এন্ট্রি</div></div>
+    <div class="dash-card"><div class="dash-card-label">হাতে থাকবে</div><div class="dash-card-val" style="color:${net>=0?'var(--green)':'var(--red)'}">${fmt(net)}</div><div class="dash-card-sub">লাভ - ব্যক্তিগত</div></div>
+    <div class="dash-card"><div class="dash-card-label">লোন বাকি</div><div class="dash-card-val" style="color:var(--red)">${fmt(loanOut)}</div><div class="dash-card-sub">${db.loans.filter(l=>loanRemaining(l)>0).length}টি সক্রিয়</div></div>
+    <div class="dash-card"><div class="dash-card-label">পেমেন্ট বাকি</div><div class="dash-card-val" style="color:var(--blue)">${fmt(pendingPayment)}</div><div class="dash-card-sub">ক্লায়েন্ট থেকে</div></div>`;
+
+  // Biz breakdown
+  const bizByType={};
+  db.expenses.forEach(e=>{bizByType[e.type]=(bizByType[e.type]||0)+Number(e.amount);});
+  const bizTypes=['কাঁচামাল','মজুরি','ওভারহেড','পরিবহন','অন্যান্য'];
+  const bizColors=['var(--amber)','var(--green)','var(--blue)','var(--purple)','var(--muted)'];
+  const maxB=Math.max(...Object.values(bizByType),1);
+  document.getElementById('biz-breakdown').innerHTML=bizTypes.map((t,i)=>{
+    const a=bizByType[t]||0,p=bizExp>0?Math.round((a/bizExp)*100):0;
+    return `<div class="breakdown-item"><div class="breakdown-label" style="color:${bizColors[i]}">${t}</div><div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${Math.round((a/maxB)*100)}%;background:${bizColors[i]}"></div></div><div class="breakdown-pct">${p}%</div><div class="breakdown-amt">${fmt(a)}</div></div>`;
+  }).join('');
+
+  // Personal breakdown
+  const perByType={};
+  db.personal.forEach(p=>{perByType[p.type]=(perByType[p.type]||0)+Number(p.amount);});
+  const perTypes=['স্কুল ফি','বাজার/মুদিখানা','ব্যাংক লোন EMI','বাড়ি ভাড়া','বিদ্যুৎ/গ্যাস/পানি','চিকিৎসা','অন্যান্য'];
+  const perColors=['var(--blue)','var(--green)','var(--red)','var(--purple)','var(--muted)','var(--amber)','var(--muted)'];
+  const maxP=Math.max(...Object.values(perByType),1);
+  document.getElementById('personal-breakdown').innerHTML=perTypes.filter(t=>perByType[t]).map((t,i)=>{
+    const a=perByType[t]||0,pct=personalTotal>0?Math.round((a/personalTotal)*100):0;
+    return `<div class="breakdown-item"><div class="breakdown-label" style="color:${perColors[i%perColors.length]};font-size:10px">${t}</div><div class="breakdown-bar-wrap"><div class="breakdown-bar" style="width:${Math.round((a/maxP)*100)}%;background:${perColors[i%perColors.length]}"></div></div><div class="breakdown-pct">${pct}%</div><div class="breakdown-amt">${fmt(a)}</div></div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:11px;padding:8px 0">কোনো ব্যক্তিগত খরচ নেই</div>';
+
+  // Cash Flow
+  const cashflowRows = [
+    {label:'(+) ক্লায়েন্ট পেমেন্ট (প্রাপ্ত)',val:db.orders.filter(o=>o.paid==='yes').reduce((s,o)=>s+Number(o.value),0),color:'var(--green)'},
+    {label:'(-) ব্যবসায়িক খরচ',val:-bizExp,color:'var(--red)'},
+    {label:'(-) ব্যক্তিগত খরচ',val:-personalTotal,color:'var(--purple)'},
+    {label:'(-) লোন EMI পেমেন্ট',val:-db.loanPayments.reduce((s,p)=>s+Number(p.amount),0),color:'var(--red)'},
+  ];
+  const netCash = cashflowRows.reduce((s,r)=>s+r.val,0);
+  const pendingIncome = pendingPayment;
+  document.getElementById('cashflow-body').innerHTML = `
+    ${cashflowRows.map(r=>`<div class="cashflow-row"><div class="cashflow-label">${r.label}</div><div class="cashflow-val" style="color:${r.color}">${r.val>=0?fmt(r.val):'- '+fmt(Math.abs(r.val))}</div></div>`).join('')}
+    <div style="height:1px;background:var(--border2);margin:4px 0"></div>
+    <div class="cashflow-row" style="background:var(--bg3)"><div class="cashflow-label" style="font-weight:600">নগদ অবস্থান</div><div class="cashflow-val" style="color:${netCash>=0?'var(--green)':'var(--red)'};font-size:16px">${fmt(netCash)}</div></div>
+    <div class="cashflow-row"><div class="cashflow-label" style="color:var(--muted)">+ পাওনা (ক্লায়েন্ট বাকি)</div><div class="cashflow-val" style="color:var(--blue)">${fmt(pendingIncome)}</div></div>`;
+
+  // Recent
+  const oMap={};db.orders.forEach(o=>oMap[o.id]=o.client);
+  const recentBiz=[...db.expenses].sort((a,b)=>b.createdAt-a.createdAt).slice(0,6);
+  document.getElementById('dash-biz-recent').innerHTML=recentBiz.length
+    ?recentBiz.map(e=>`<tr><td style="color:var(--muted)">${fmtD(e.date)}</td><td>${typeTag(e.type)}</td><td style="text-align:right;color:var(--amber)">${fmt(e.amount)}</td></tr>`).join('')
+    :'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">কোনো খরচ নেই</td></tr>';
+  const recentPer=[...db.personal].sort((a,b)=>b.createdAt-a.createdAt).slice(0,6);
+  document.getElementById('dash-personal-recent').innerHTML=recentPer.length
+    ?recentPer.map(p=>`<tr><td style="color:var(--muted)">${p.month||'—'}</td><td>${typeTag(p.type,true)}</td><td style="text-align:right;color:var(--purple)">${fmt(p.amount)}</td></tr>`).join('')
+    :'<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:16px">কোনো খরচ নেই</td></tr>';
+}
+
+/* ══ ORDERS ══ */
+function renderOrders() {
+  updateTopbar();
+  const g=document.getElementById('orders-grid');
+  if(!db.orders.length){g.innerHTML=`<div class="empty-state" style="grid-column:1/-1"><div class="es-icon">📦</div>কোনো অর্ডার নেই<br><br><button class="btn btn-primary" onclick="openOrderModal()">+ প্রথম অর্ডার</button></div>`;return;}
+  g.innerHTML=db.orders.map(o=>{
+    const sp=orderTotal(o.id),pr=Number(o.value)-sp,pct=Number(o.value)>0?Math.min(100,Math.round((sp/Number(o.value))*100)):0;
+    return `<div class="order-card" onclick="openOrderDetail('${o.id}')">
+      <div class="oc-header"><div class="oc-name">${o.client}</div>${statusBadge(o.status)}</div>
+      <div class="oc-amounts">
+        <div><div class="oc-amt-label">অর্ডার মূল্য</div><div class="oc-amt-val" style="color:var(--amber)">${fmt(o.value)}</div></div>
+        <div><div class="oc-amt-label">মোট খরচ</div><div class="oc-amt-val" style="color:var(--red)">${fmt(sp)}</div></div>
+        <div><div class="oc-amt-label">লাভ/ক্ষতি</div><div class="oc-amt-val" style="color:${pr>=0?'var(--green)':'var(--red)'}">${fmt(pr)}</div></div>
+      </div>
+      <div class="oc-progress"><div class="oc-progress-bar ${pct>90?'danger':''}" style="width:${pct}%"></div></div>
+      <div class="oc-meta"><span class="oc-meta-txt">বাজেটের ${pct}% খরচ</span>${paidLabel(o.paid)}</div>
+    </div>`;
+  }).join('');
+}
+
+function openOrderDetail(id) {
+  currentOrderId=id;
+  const o=db.orders.find(x=>x.id===id);if(!o)return;
+  const sp=orderTotal(id),pr=Number(o.value)-sp,pct=Number(o.value)>0?Math.round((pr/Number(o.value))*100):0;
+  const exps=orderExp(id).sort((a,b)=>b.createdAt-a.createdAt);
+  document.getElementById('odm-title').textContent=o.client;
+  document.getElementById('odm-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+      <div><div class="form-label">অর্ডার মূল্য</div><div style="font-size:16px;color:var(--amber)">${fmt(o.value)}</div></div>
+      <div><div class="form-label">মোট খরচ</div><div style="font-size:16px;color:var(--red)">${fmt(sp)}</div></div>
+      <div><div class="form-label">লাভ/ক্ষতি</div><div style="font-size:16px;color:${pr>=0?'var(--green)':'var(--red)'}">${fmt(pr)} (${pct}%)</div></div>
+      <div><div class="form-label">পেমেন্ট</div><div style="font-size:14px">${paidLabel(o.paid)}</div></div>
+    </div>
+    ${o.desc?`<div style="font-size:11px;color:var(--muted);margin-bottom:14px;padding:8px;background:var(--bg3);border-radius:var(--r)">${o.desc}</div>`:''}
+    <div class="sec-label">খরচ (${exps.length}টি)</div>
+    <table class="exp-table"><thead><tr><th>তারিখ</th><th>ধরন</th><th>নোট</th><th style="text-align:right">পরিমাণ</th><th></th></tr></thead>
+    <tbody>${exps.length?exps.map(e=>`<tr><td style="color:var(--muted)">${fmtD(e.date)}</td><td>${typeTag(e.type)}</td><td style="color:var(--muted);font-size:11px">${e.note||'—'}</td><td style="text-align:right;color:var(--amber)">${fmt(e.amount)}</td><td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}',true)">✕</button></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">খরচ নেই</td></tr>'}</tbody></table>`;
+  document.getElementById('odm-edit-btn').onclick=()=>{closeModal('order-detail-modal');openOrderModal(id);};
+  document.getElementById('odm-delete-btn').onclick=()=>deleteOrder(id);
+  openModal('order-detail-modal');
+}
+
+/* ══ PERSONAL EXPENSES ══ */
+function renderPersonalTab() {
+  updateTopbar();
+  // Monthly summary
+  const byMonth={};
+  db.personal.forEach(p=>{const m=p.month||p.date?.slice(0,7)||'unknown';byMonth[m]=(byMonth[m]||0)+Number(p.amount);});
+  const months=Object.keys(byMonth).sort().reverse().slice(0,3);
+  document.getElementById('personal-monthly-summary').innerHTML=months.length?`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:4px">
+      ${months.map(m=>`<div class="dash-card"><div class="dash-card-label">${m}</div><div class="dash-card-val" style="color:var(--purple)">${fmt(byMonth[m])}</div></div>`).join('')}
+    </div>`:'';
+  // Populate month filter
+  const sel=document.getElementById('filter-personal-month');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">সব মাস</option>';
+  Object.keys(byMonth).sort().reverse().forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  if(cur) sel.value=cur;
+  renderPersonalTable();
+}
+
+function renderPersonalTable() {
+  const ft=document.getElementById('filter-personal-type').value;
+  const fm=document.getElementById('filter-personal-month').value;
+  let rows=[...db.personal].sort((a,b)=>b.createdAt-a.createdAt);
+  if(ft) rows=rows.filter(p=>p.type===ft);
+  if(fm) rows=rows.filter(p=>(p.month||p.date?.slice(0,7))===fm);
+  document.getElementById('personal-table-body').innerHTML=rows.length
+    ?rows.map(p=>`<tr><td style="color:var(--muted)">${p.month||'—'}</td><td>${typeTag(p.type,true)}</td><td style="color:var(--muted);font-size:11px">${p.note||'—'}</td><td style="text-align:right;color:var(--purple)">${fmt(p.amount)}</td><td><button class="btn btn-danger btn-sm" onclick="deletePersonal('${p.id}')">✕</button></td></tr>`).join('')
+    :'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:30px">কোনো খরচ নেই</td></tr>';
+}
+
+/* ══ LOANS ══ */
+function renderLoans() {
+  updateTopbar();
+  const totalLoan=db.loans.reduce((s,l)=>s+Number(l.total),0);
+  const totalPaid=db.loans.reduce((s,l)=>s+loanPaid(l.id),0);
+  const outstanding=totalLoanOutstanding();
+  const monthlyEMI=db.loans.filter(l=>loanRemaining(l)>0).reduce((s,l)=>s+Number(l.emi),0);
+
+  document.getElementById('loans-summary').innerHTML=`
+    <div class="dash-card"><div class="dash-card-label">মোট লোন নেওয়া</div><div class="dash-card-val" style="color:var(--amber)">${fmt(totalLoan)}</div></div>
+    <div class="dash-card"><div class="dash-card-label">মোট পরিশোধ</div><div class="dash-card-val" style="color:var(--green)">${fmt(totalPaid)}</div></div>
+    <div class="dash-card"><div class="dash-card-label">এখনো বাকি</div><div class="dash-card-val" style="color:var(--red)">${fmt(outstanding)}</div></div>
+    <div class="dash-card"><div class="dash-card-label">মাসিক EMI মোট</div><div class="dash-card-val" style="color:var(--purple)">${fmt(monthlyEMI)}</div></div>`;
+
+  if(!db.loans.length){document.getElementById('loans-list').innerHTML=`<div class="empty-state"><div class="es-icon">🏦</div>কোনো লোন নেই<br><br><button class="btn btn-purple" onclick="openLoanModal()">+ লোন যোগ করো</button></div>`;return;}
+
+  document.getElementById('loans-list').innerHTML=db.loans.map(l=>{
+    const paid=loanPaid(l.id),rem=loanRemaining(l),pct=Number(l.total)>0?Math.round((paid/Number(l.total))*100):0;
+    const isActive=rem>0;
+    return `<div class="loan-card ${isActive?'active-loan':''}">
+      <div class="loan-header">
+        <div class="loan-name">${l.name}</div>
+        <div style="display:flex;gap:8px">
+          ${isActive?`<button class="btn btn-danger btn-sm" onclick="openLoanPaymentFor('${l.id}')">পেমেন্ট দাও</button>`:'<span style="color:var(--green);font-size:11px">✓ পরিশোধ হয়েছে</span>'}
+          <button class="btn btn-danger btn-sm" onclick="deleteLoan('${l.id}')">✕</button>
+        </div>
+      </div>
+      <div class="loan-grid">
+        <div class="loan-stat"><label>মোট লোন</label><span style="color:var(--amber)">${fmt(l.total)}</span></div>
+        <div class="loan-stat"><label>পরিশোধ হয়েছে</label><span style="color:var(--green)">${fmt(paid)}</span></div>
+        <div class="loan-stat"><label>এখনো বাকি</label><span style="color:${rem>0?'var(--red)':'var(--green)'}">${fmt(rem)}</span></div>
+        <div class="loan-stat"><label>মাসিক EMI</label><span style="color:var(--purple)">${fmt(l.emi)}</span></div>
+      </div>
+      ${l.rate?`<div style="font-size:10px;color:var(--muted);margin-bottom:8px">সুদের হার ${l.rate}% | ${l.tenure||'—'} মাস</div>`:''}
+      <div class="loan-progress"><div class="loan-progress-bar" style="width:${pct}%;background:${pct>=100?'var(--green)':'var(--red)'}"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px"><span>${pct}% পরিশোধ</span><span>${100-pct}% বাকি</span></div>
+    </div>`;
+  }).join('');
+
+  // Loan payment history
+  const loanMap={};db.loans.forEach(l=>loanMap[l.id]=l.name);
+  const payments=[...db.loanPayments].sort((a,b)=>b.createdAt-a.createdAt);
+  document.getElementById('loan-payments-body').innerHTML=payments.length
+    ?payments.map(p=>`<tr><td style="color:var(--muted)">${fmtD(p.date)}</td><td style="font-size:11px">${loanMap[p.loanId]||'—'}</td><td><span class="tag ${p.type==='emi'?'tag-loan':'tag-other'}">${p.type==='emi'?'EMI':'অতিরিক্ত'}</span></td><td style="color:var(--muted);font-size:11px">${p.note||'—'}</td><td style="text-align:right;color:var(--red)">${fmt(p.amount)}</td><td><button class="btn btn-danger btn-sm" onclick="deleteLoanPayment('${p.id}')">✕</button></td></tr>`).join('')
+    :'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">কোনো পেমেন্ট নেই</td></tr>';
+}
+
+/* ══ SMART INSIGHTS ══ */
+function renderInsights() {
+  const insights = [];
+  const bizRev=db.orders.reduce((s,o)=>s+Number(o.value),0);
+  const bizExp=db.expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const bizProfit=bizRev-bizExp;
+  const personalTotal=db.personal.reduce((s,p)=>s+Number(p.amount),0);
+  const net=bizProfit-personalTotal;
+  const loanOut=totalLoanOutstanding();
+  const monthlyEMI=db.loans.filter(l=>loanRemaining(l)>0).reduce((s,l)=>s+Number(l.emi),0);
+  const pendingPayment=db.orders.filter(o=>o.paid!=='yes').reduce((s,o)=>s+Number(o.value),0);
+
+  // 1. Profit margin
+  if(bizRev>0) {
+    const margin=((bizProfit/bizRev)*100).toFixed(1);
+    const type=margin<15?'warn':margin>30?'good':'info';
+    insights.push({type,icon:'📊',title:'লাভের হার',body:`আপনার বর্তমান লাভের হার <strong>${margin}%</strong>।${margin<15?' এটা অনেক কম — খরচ কমানো বা দাম বাড়ানো দরকার।':margin>30?' চমৎকার! এই হার ধরে রাখুন।':' মোটামুটি ভালো, কিন্তু আরো উন্নতির সুযোগ আছে।'}`});
+  }
+
+  // 2. Cash in hand vs loan
+  if(loanOut>0 && bizProfit>0) {
+    const months=Math.ceil(loanOut/(bizProfit/Math.max(db.orders.length,1)));
+    insights.push({type:'warn',icon:'🏦',title:'লোন পরিশোধের সময়',body:`বর্তমান লাভের হারে লোন পরিশোধ করতে আনুমানিক <strong>${months} মাস</strong> লাগবে। বাকি লোন: <strong>${fmt(loanOut)}</strong>`});
+  }
+
+  // 3. EMI burden
+  if(monthlyEMI>0 && bizProfit>0) {
+    const burden=((monthlyEMI/bizProfit)*100).toFixed(1);
+    insights.push({type:burden>40?'warn':'info',icon:'💳',title:'EMI চাপ',body:`মাসিক EMI <strong>${fmt(monthlyEMI)}</strong> যা আপনার ব্যবসায়িক লাভের <strong>${burden}%</strong>।${burden>40?' এটা অনেক বেশি — ব্যবসার বৃদ্ধিতে বাধা দিচ্ছে।':' এটা সহনীয় পর্যায়ে আছে।'}`});
+  }
+
+  // 4. Pending payments
+  if(pendingPayment>0) {
+    const pendingOrders=db.orders.filter(o=>o.paid!=='yes').length;
+    insights.push({type:'amber',icon:'⏳',title:'বাকি পেমেন্ট',body:`<strong>${pendingOrders}টি</strong> অর্ডারের মোট <strong>${fmt(pendingPayment)}</strong> পেমেন্ট বাকি আছে। এই টাকা আদায় করলে নগদ অবস্থান ভালো হবে।`});
+  }
+
+  // 5. Personal vs business ratio
+  if(bizProfit>0 && personalTotal>0) {
+    const ratio=((personalTotal/bizProfit)*100).toFixed(1);
+    insights.push({type:ratio>60?'warn':ratio<30?'good':'info',icon:'⚖️',title:'ব্যক্তিগত খরচ অনুপাত',body:`ব্যক্তিগত খরচ লাভের <strong>${ratio}%</strong>।${ratio>60?' সতর্কতা! ব্যক্তিগত খরচ অনেক বেশি, সঞ্চয় কমে যাচ্ছে।':ratio<30?' চমৎকার! খরচ নিয়ন্ত্রণে আছে।':' ঠিকঠাক আছে।'}`});
+  }
+
+  // 6. Biggest expense category
+  const byType={};db.expenses.forEach(e=>{byType[e.type]=(byType[e.type]||0)+Number(e.amount);});
+  const topType=Object.entries(byType).sort((a,b)=>b[1]-a[1])[0];
+  if(topType) {
+    const pct=bizExp>0?((topType[1]/bizExp)*100).toFixed(1):0;
+    insights.push({type:'info',icon:'🔍',title:'সবচেয়ে বড় খরচ',body:`আপনার সবচেয়ে বেশি খরচ হচ্ছে <strong>${topType[0]}</strong> খাতে — মোট ব্যবসায়িক খরচের <strong>${pct}%</strong> (${fmt(topType[1])})।`});
+  }
+
+  // 7. Net position
+  insights.push({type:net>=0?'good':'warn',icon:net>=0?'✅':'🚨',title:'সামগ্রিক আর্থিক অবস্থান',body:`সব কিছু মিলিয়ে হাতে থাকছে <strong style="color:${net>=0?'var(--green)':'var(--red)'}">${fmt(net)}</strong>।${net<0?' জরুরি ভিত্তিতে খরচ কমানো দরকার।':net<bizProfit*0.2?' সঞ্চয় কম — ব্যক্তিগত খরচ কমানোর চেষ্টা করুন।':' আর্থিক অবস্থান ভালো আছে।'}`});
+
+  // 8. No data state
+  if(!db.orders.length && !db.expenses.length) {
+    insights.push({type:'info',icon:'💡',title:'শুরু করুন',body:'অর্ডার এবং খরচ যোগ করলে এখানে স্মার্ট বিশ্লেষণ দেখাবে। আপনার ব্যবসার সম্পূর্ণ চিত্র একনজরে পাবেন।'});
+  }
+
+  document.getElementById('insights-grid').innerHTML=insights.map(i=>`
+    <div class="insight-card ${i.type}">
+      <div class="insight-icon">${i.icon}</div>
+      <div class="insight-title">${i.title}</div>
+      <div class="insight-body">${i.body}</div>
+    </div>`).join('');
+}
+
+/* ══ REPORT ══ */
+function renderReport() {
+  updateTopbar();
+  const rows=db.orders.map(o=>{
+    const s=orderTotal(o.id),p=Number(o.value)-s,pct=Number(o.value)>0?((p/Number(o.value))*100).toFixed(1):'0.0';
+    return `<tr><td>${o.client}</td><td>${fmtD(o.date)}</td><td style="text-align:right;color:var(--amber)">${fmt(o.value)}</td><td style="text-align:right;color:var(--red)">${fmt(s)}</td><td style="text-align:right;color:${p>=0?'var(--green)':'var(--red)'}">${fmt(p)}</td><td style="text-align:right;color:${p>=0?'var(--green)':'var(--red)'}">${pct}%</td><td>${statusBadge(o.status)}</td><td>${paidLabel(o.paid)}</td></tr>`;
+  }).join('');
+  const tR=db.orders.reduce((s,o)=>s+Number(o.value),0),tE=db.expenses.reduce((s,e)=>s+Number(e.amount),0),tP=tR-tE;
+  const tPer=db.personal.reduce((s,p)=>s+Number(p.amount),0),tLoan=totalLoanOutstanding();
+  document.getElementById('report-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px">
+      <div class="dash-card"><div class="dash-card-label">মোট আয়</div><div class="dash-card-val" style="color:var(--amber);font-size:22px">${fmt(tR)}</div></div>
+      <div class="dash-card"><div class="dash-card-label">ব্যবসায়িক লাভ</div><div class="dash-card-val" style="color:${tP>=0?'var(--green)':'var(--red)'};font-size:22px">${fmt(tP)}</div></div>
+      <div class="dash-card"><div class="dash-card-label">ব্যক্তিগত খরচ</div><div class="dash-card-val" style="color:var(--purple);font-size:22px">${fmt(tPer)}</div></div>
+      <div class="dash-card"><div class="dash-card-label">হাতে থাকবে</div><div class="dash-card-val" style="color:${(tP-tPer)>=0?'var(--green)':'var(--red)'};font-size:22px">${fmt(tP-tPer)}</div></div>
+      <div class="dash-card"><div class="dash-card-label">লোন বাকি</div><div class="dash-card-val" style="color:var(--red);font-size:22px">${fmt(tLoan)}</div></div>
+    </div>
+    <div class="sec-label">অর্ডার ভিত্তিক রিপোর্ট</div>
+    <table class="exp-table">
+      <thead><tr><th>ক্লায়েন্ট</th><th>তারিখ</th><th style="text-align:right">অর্ডার মূল্য</th><th style="text-align:right">খরচ</th><th style="text-align:right">লাভ</th><th style="text-align:right">হার</th><th>স্ট্যাটাস</th><th>পেমেন্ট</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">কোনো ডেটা নেই</td></tr>'}</tbody>
+      <tfoot><tr style="border-top:2px solid var(--border2)"><td colspan="2" style="color:var(--muted);font-size:10px">মোট</td><td style="text-align:right;color:var(--amber)">${fmt(tR)}</td><td style="text-align:right;color:var(--red)">${fmt(tE)}</td><td style="text-align:right;color:${tP>=0?'var(--green)':'var(--red)'}">${fmt(tP)}</td><td colspan="3"></td></tr></tfoot>
+    </table>`;
+}
+
+/* ══ DROPDOWNS ══ */
+function populateDropdowns(){
+  ['exp-order','qe-order','filter-order'].forEach(sid=>{
+    const el=document.getElementById(sid);if(!el)return;
+    const cv=el.value;
+    el.innerHTML=sid==='filter-order'?'<option value="">সব অর্ডার</option>':'<option value="">-- সাধারণ ব্যবসায়িক খরচ --</option>';
+    db.orders.forEach(o=>{const op=document.createElement('option');op.value=o.id;op.textContent=o.client;el.appendChild(op);});
+    if(cv) el.value=cv;
+  });
+  // Loan dropdown
+  const lpSel=document.getElementById('lp-loan');
+  if(lpSel){lpSel.innerHTML='';db.loans.forEach(l=>{const op=document.createElement('option');op.value=l.id;op.textContent=l.name;lpSel.appendChild(op);});}
+}
+
+/* ══ TAB SWITCH ══ */
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach((t,i)=>{
+    const tabs=['dashboard','orders','expenses','personal','loans','insights','report','settings'];
+    t.classList.toggle('active',tabs[i]===tab);
+  });
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+  if(tab==='dashboard') renderDashboard();
+  if(tab==='orders') renderOrders();
+  if(tab==='expenses'){updateTopbar();populateDropdowns();renderExpensesTable();}
+  if(tab==='personal') renderPersonalTab();
+  if(tab==='loans') renderLoans();
+  if(tab==='insights') renderInsights();
+  if(tab==='report') renderReport();
+}
+
+/* ══ CRUD: ORDERS ══ */
+const openModal=id=>document.getElementById(id).classList.add('open');
+const closeModal=id=>document.getElementById(id).classList.remove('open');
+
+function openOrderModal(editId=null){
+  document.getElementById('order-edit-id').value=editId||'';
+  document.getElementById('order-modal-title').textContent=editId?'অর্ডার সম্পাদনা':'নতুন অর্ডার';
+  if(editId){const o=db.orders.find(x=>x.id===editId);document.getElementById('order-client').value=o.client;document.getElementById('order-value').value=o.value;document.getElementById('order-status').value=o.status;document.getElementById('order-date').value=o.date||today();document.getElementById('order-delivery').value=o.delivery||'';document.getElementById('order-desc').value=o.desc||'';document.getElementById('order-paid').value=o.paid||'no';}
+  else{['order-client','order-value','order-delivery','order-desc'].forEach(id=>document.getElementById(id).value='');document.getElementById('order-status').value='active';document.getElementById('order-date').value=today();document.getElementById('order-paid').value='no';}
+  openModal('order-modal');
+}
+function saveOrder(){
+  const client=document.getElementById('order-client').value.trim(),value=document.getElementById('order-value').value;
+  if(!client||!value){toast('নাম ও মূল্য আবশ্যক','error');return;}
+  const editId=document.getElementById('order-edit-id').value;
+  const data={client,value:Number(value),status:document.getElementById('order-status').value,date:document.getElementById('order-date').value,delivery:document.getElementById('order-delivery').value,desc:document.getElementById('order-desc').value.trim(),paid:document.getElementById('order-paid').value};
+  if(editId){const idx=db.orders.findIndex(o=>o.id===editId);db.orders[idx]={...db.orders[idx],...data};toast('অর্ডার আপডেট ✓');}
+  else{db.orders.unshift({id:uid(),createdAt:Date.now(),...data});toast('নতুন অর্ডার যোগ হয়েছে ✓');}
+  persist();closeModal('order-modal');renderOrders();updateTopbar();populateDropdowns();
+}
+function deleteOrder(id){
+  if(!confirm('অর্ডার ও সব খরচ মুছবেন?'))return;
+  db.orders=db.orders.filter(o=>o.id!==id);db.expenses=db.expenses.filter(e=>e.orderId!==id);
+  persist();closeModal('order-detail-modal');toast('মুছে গেছে','error');renderOrders();updateTopbar();
+}
+
+/* ══ CRUD: EXPENSES ══ */
+function openExpenseModal(editId=null,preOrderId=null){
+  populateDropdowns();
+  document.getElementById('exp-edit-id').value=editId||'';
+  if(editId){const e=db.expenses.find(x=>x.id===editId);document.getElementById('exp-order').value=e.orderId||'';document.getElementById('exp-type').value=e.type;document.getElementById('exp-amount').value=e.amount;document.getElementById('exp-date').value=e.date||today();document.getElementById('exp-note').value=e.note||'';}
+  else{document.getElementById('exp-order').value=preOrderId||'';document.getElementById('exp-type').value='কাঁচামাল';document.getElementById('exp-amount').value='';document.getElementById('exp-date').value=today();document.getElementById('exp-note').value='';}
+  openModal('expense-modal');
+}
+function saveExpense(){
+  const amount=document.getElementById('exp-amount').value;
+  if(!amount||Number(amount)<=0){toast('পরিমাণ দিন','error');return;}
+  const editId=document.getElementById('exp-edit-id').value;
+  const data={orderId:document.getElementById('exp-order').value,type:document.getElementById('exp-type').value,amount:Number(amount),date:document.getElementById('exp-date').value||today(),note:document.getElementById('exp-note').value.trim()};
+  if(editId){const idx=db.expenses.findIndex(e=>e.id===editId);db.expenses[idx]={...db.expenses[idx],...data};toast('আপডেট ✓');}
+  else{db.expenses.unshift({id:uid(),createdAt:Date.now(),...data});toast('খরচ সেভ হয়েছে ✓');}
+  persist();closeModal('expense-modal');renderDashboard();renderExpensesTable();updateTopbar();
+  if(currentOrderId&&document.getElementById('order-detail-modal').classList.contains('open')) openOrderDetail(currentOrderId);
+}
+function quickAddExpense(){
+  const amount=document.getElementById('qe-amount').value;
+  if(!amount||Number(amount)<=0){toast('পরিমাণ দিন','error');return;}
+  const data={id:uid(),createdAt:Date.now(),orderId:document.getElementById('qe-order').value,type:document.getElementById('qe-type').value,amount:Number(amount),date:today(),note:document.getElementById('qe-note').value.trim()};
+  db.expenses.unshift(data);persist();
+  document.getElementById('qe-amount').value='';document.getElementById('qe-note').value='';
+  toast('✓ '+data.type+' '+fmt(data.amount));
+  renderExpensesTable();updateTopbar();
+}
+function renderExpensesTable(){
+  const fo=document.getElementById('filter-order').value,ft=document.getElementById('filter-type').value;
+  const oMap={};db.orders.forEach(o=>oMap[o.id]=o.client);
+  let exps=[...db.expenses].sort((a,b)=>b.createdAt-a.createdAt);
+  if(fo) exps=exps.filter(e=>e.orderId===fo);
+  if(ft) exps=exps.filter(e=>e.type===ft);
+  document.getElementById('exp-table-body').innerHTML=exps.length
+    ?exps.map(e=>`<tr><td style="color:var(--muted)">${fmtD(e.date)}</td><td style="color:var(--muted);font-size:11px">${e.orderId&&oMap[e.orderId]?oMap[e.orderId]:'সাধারণ'}</td><td>${typeTag(e.type)}</td><td style="color:var(--muted);font-size:11px">${e.note||'—'}</td><td style="text-align:right;color:var(--amber)">${fmt(e.amount)}</td><td><button class="btn btn-danger btn-sm" onclick="deleteExpense('${e.id}')">✕</button></td></tr>`).join('')
+    :'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">কোনো খরচ নেই</td></tr>';
+}
+function deleteExpense(id,fromDetail=false){
+  if(!confirm('মুছবেন?'))return;
+  db.expenses=db.expenses.filter(e=>e.id!==id);persist();
+  toast('মুছে গেছে','error');renderExpensesTable();updateTopbar();renderDashboard();
+  if(fromDetail&&currentOrderId) openOrderDetail(currentOrderId);
+}
+function openExpenseFromOrder(){closeModal('order-detail-modal');openExpenseModal(null,currentOrderId);}
+
+/* ══ CRUD: PERSONAL ══ */
+function openPersonalModal(editId=null){
+  document.getElementById('per-edit-id').value=editId||'';
+  if(editId){const p=db.personal.find(x=>x.id===editId);document.getElementById('per-type').value=p.type;document.getElementById('per-amount').value=p.amount;document.getElementById('per-month').value=p.month||thisMonth();document.getElementById('per-date').value=p.date||today();document.getElementById('per-note').value=p.note||'';}
+  else{document.getElementById('per-type').value='বাজার/মুদিখানা';document.getElementById('per-amount').value='';document.getElementById('per-month').value=thisMonth();document.getElementById('per-date').value=today();document.getElementById('per-note').value='';}
+  openModal('personal-modal');
+}
+function savePersonal(){
+  const amount=document.getElementById('per-amount').value;
+  if(!amount||Number(amount)<=0){toast('পরিমাণ দিন','error');return;}
+  const editId=document.getElementById('per-edit-id').value;
+  const data={type:document.getElementById('per-type').value,amount:Number(amount),month:document.getElementById('per-month').value,date:document.getElementById('per-date').value||today(),note:document.getElementById('per-note').value.trim()};
+  if(editId){const idx=db.personal.findIndex(p=>p.id===editId);db.personal[idx]={...db.personal[idx],...data};toast('আপডেট ✓');}
+  else{db.personal.unshift({id:uid(),createdAt:Date.now(),...data});toast('ব্যক্তিগত খরচ সেভ হয়েছে ✓');}
+  persist();closeModal('personal-modal');renderDashboard();updateTopbar();
+}
+function quickAddPersonal(){
+  const amount=document.getElementById('qp-amount').value;
+  if(!amount||Number(amount)<=0){toast('পরিমাণ দিন','error');return;}
+  const data={id:uid(),createdAt:Date.now(),type:document.getElementById('qp-type').value,amount:Number(amount),month:document.getElementById('qp-month').value||thisMonth(),date:today(),note:document.getElementById('qp-note').value.trim()};
+  db.personal.unshift(data);persist();
+  document.getElementById('qp-amount').value='';document.getElementById('qp-note').value='';
+  toast('✓ '+data.type+' '+fmt(data.amount));
+  renderPersonalTab();updateTopbar();
+}
+function deletePersonal(id){
+  if(!confirm('মুছবেন?'))return;
+  db.personal=db.personal.filter(p=>p.id!==id);persist();
+  toast('মুছে গেছে','error');renderPersonalTab();updateTopbar();renderDashboard();
+}
+
+/* ══ CRUD: LOANS ══ */
+function openLoanModal(editId=null){
+  document.getElementById('loan-edit-id').value=editId||'';
+  document.getElementById('loan-modal-title').textContent=editId?'লোন সম্পাদনা':'নতুন লোন';
+  if(!editId){['loan-name','loan-total','loan-emi','loan-rate','loan-tenure','loan-note'].forEach(id=>document.getElementById(id).value='');document.getElementById('loan-start').value=today();}
+  openModal('loan-modal');
+}
+function saveLoan(){
+  const name=document.getElementById('loan-name').value.trim(),total=document.getElementById('loan-total').value,emi=document.getElementById('loan-emi').value;
+  if(!name||!total||!emi){toast('নাম, মোট পরিমাণ ও EMI আবশ্যক','error');return;}
+  const editId=document.getElementById('loan-edit-id').value;
+  const data={name,total:Number(total),emi:Number(emi),start:document.getElementById('loan-start').value,rate:document.getElementById('loan-rate').value,tenure:document.getElementById('loan-tenure').value,note:document.getElementById('loan-note').value.trim()};
+  if(editId){const idx=db.loans.findIndex(l=>l.id===editId);db.loans[idx]={...db.loans[idx],...data};toast('লোন আপডেট ✓');}
+  else{db.loans.unshift({id:uid(),createdAt:Date.now(),...data});toast('লোন যোগ হয়েছে ✓');}
+  persist();closeModal('loan-modal');renderLoans();updateTopbar();populateDropdowns();
+}
+function deleteLoan(id){
+  if(!confirm('এই লোন ও সব পেমেন্ট ইতিহাস মুছবেন?'))return;
+  db.loans=db.loans.filter(l=>l.id!==id);db.loanPayments=db.loanPayments.filter(p=>p.loanId!==id);
+  persist();renderLoans();updateTopbar();toast('মুছে গেছে','error');
+}
+function openLoanPaymentFor(loanId){
+  populateDropdowns();
+  setTimeout(()=>{ const s=document.getElementById('lp-loan');if(s) s.value=loanId; },50);
+  const loan=db.loans.find(l=>l.id===loanId);
+  if(loan){document.getElementById('lp-amount').value=loan.emi;}
+  document.getElementById('lp-date').value=today();
+  document.getElementById('lp-note').value='';
+  document.getElementById('lp-type').value='emi';
+  openModal('loan-payment-modal');
+}
+function saveLoanPayment(){
+  const loanId=document.getElementById('lp-loan').value,amount=document.getElementById('lp-amount').value;
+  if(!loanId||!amount||Number(amount)<=0){toast('লোন ও পরিমাণ আবশ্যক','error');return;}
+  const data={id:uid(),createdAt:Date.now(),loanId,type:document.getElementById('lp-type').value,amount:Number(amount),date:document.getElementById('lp-date').value||today(),note:document.getElementById('lp-note').value.trim()};
+  db.loanPayments.unshift(data);persist();closeModal('loan-payment-modal');
+  toast('লোন পেমেন্ট সেভ ✓');renderLoans();updateTopbar();renderDashboard();
+}
+function deleteLoanPayment(id){
+  if(!confirm('এই পেমেন্ট মুছবেন?'))return;
+  db.loanPayments=db.loanPayments.filter(p=>p.id!==id);persist();
+  toast('মুছে গেছে','error');renderLoans();updateTopbar();
+}
+
+/* ══ GOOGLE SHEETS SYNC ══ */
+function setSyncDot(state){const d=document.getElementById('sync-dot');d.className='sync-dot '+(state==='ok'?'ok':state==='busy'?'busy':state==='err'?'err':'');}
+function addLog(msg,type='info'){const log=document.getElementById('sync-log');if(!log)return;const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const el=document.createElement('div');el.className='log-line '+type;el.textContent=`[${t}] ${msg}`;log.insertBefore(el,log.firstChild);while(log.children.length>30) log.removeChild(log.lastChild);}
+function setConnStatus(type,msg){const el=document.getElementById('conn-status');if(!el)return;el.className='conn-status '+(type==='ok'?'ok':type==='fail'?'fail':'idle');el.textContent=msg;}
+async function gasCall(url,method='GET',body=null){const opts={method,redirect:'follow',credentials:'omit'};if(body) opts.body=JSON.stringify(body);const res=await fetch(url,opts);const text=await res.text();if(text.trim().startsWith('<')) throw new Error('Apps Script returned HTML — re-deploy করো');let json;try{json=JSON.parse(text);}catch{throw new Error('Invalid response');}return json;}
+async function testConnection(){const url=getUrl();if(!url){toast('Settings-এ URL দাও','error');return;}setSyncDot('busy');addLog('সংযোগ পরীক্ষা...','info');try{const j=await gasCall(url+'?action=ping');if(j.success){setSyncDot('ok');setConnStatus('ok','// ✓ Google Sheets সংযুক্ত — অটো-সিঙ্ক চালু');addLog('সংযোগ সফল ✓','ok');toast('✓ সংযুক্ত');}else throw new Error(j.error);}catch(e){setSyncDot('err');setConnStatus('fail','// ✗ '+e.message);addLog('ব্যর্থ: '+e.message,'err');toast('সংযোগ ব্যর্থ','error');}}
+async function pushToSheets(silent=false){const url=getUrl();if(!url) return;setSyncDot('busy');document.getElementById('sync-btn').disabled=true;if(!silent) toast('Sheets-এ পাঠানো হচ্ছে...','info');try{const j=await gasCall(url,'POST',{action:'sync',data:db});if(j.success){setSyncDot('ok');addLog('সিঙ্ক সফল ✓','ok');if(!silent) toast('✓ Google Sheets আপডেট হয়েছে');}else throw new Error(j.error||'Sync failed');}catch(e){setSyncDot('err');addLog('ব্যর্থ: '+e.message,'err');if(!silent) toast('সিঙ্ক ব্যর্থ','error');}document.getElementById('sync-btn').disabled=false;}
+async function pullFromSheets(){const url=getUrl();if(!url){toast('URL দাও','error');return;}setSyncDot('busy');toast('লোড হচ্ছে...','info');try{const j=await gasCall(url+'?action=get');if(j.success&&j.data){db={...db,...j.data};localStorage.setItem(KEY,JSON.stringify(db));setSyncDot('ok');addLog('লোড সফল ✓','ok');toast('✓ ডেটা লোড হয়েছে');renderDashboard();renderOrders();populateDropdowns();}else throw new Error(j.error||'No data');}catch(e){setSyncDot('err');addLog('ব্যর্থ: '+e.message,'err');toast('লোড ব্যর্থ','error');}}
+function manualSync(){const url=getUrl();if(!url){toast('Settings-এ URL দাও','error');switchTab('settings');return;}pushToSheets(false);}
+function autoSync(){if(!getUrl()) return;pushToSheets(true);}
+function onUrlInput(){const url=document.getElementById('script-url').value.trim();localStorage.setItem(URL_KEY,url);setConnStatus('idle',url?'// URL সেট — পরীক্ষা করো':'// URL দেওয়া হয়নি');}
+
+/* ══ PASSWORD ══ */
+const DEFAULT_PASS = 'tapan2024';
+function getPass(){return localStorage.getItem(PASS_KEY)||DEFAULT_PASS;}
+function checkPass(){const val=document.getElementById('gate-input').value;if(val===getPass()){sessionStorage.setItem(AUTH_KEY,'1');document.getElementById('gate').style.display='none';}else{const err=document.getElementById('gate-err');err.style.opacity='1';document.getElementById('gate-input').value='';setTimeout(()=>err.style.opacity='0',2500);}}
+function changePassword(){const np=document.getElementById('new-pass').value,cp=document.getElementById('confirm-pass').value;if(!np){toast('পাসওয়ার্ড দিন','error');return;}if(np!==cp){toast('পাসওয়ার্ড মিলছে না','error');return;}if(np.length<4){toast('কমপক্ষে ৪ অক্ষর দিন','error');return;}localStorage.setItem(PASS_KEY,np);document.getElementById('new-pass').value='';document.getElementById('confirm-pass').value='';toast('✓ পাসওয়ার্ড পরিবর্তন হয়েছে');}
+if(sessionStorage.getItem(AUTH_KEY)==='1'){document.getElementById('gate').style.display='none';}
+
+/* ══ DATA TOOLS ══ */
+function exportCSV(){const oMap={};db.orders.forEach(o=>oMap[o.id]=o.client);const rows=[['ধরন','তারিখ','অর্ডার/মাস','বিভাগ','নোট','পরিমাণ']];db.expenses.forEach(e=>rows.push(['ব্যবসায়িক',e.date,oMap[e.orderId]||'সাধারণ',e.type,e.note||'',e.amount]));db.personal.forEach(p=>rows.push(['ব্যক্তিগত',p.date,p.month||'',p.type,p.note||'',p.amount]));const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='skyhara-'+today()+'.csv';a.click();toast('CSV ডাউনলোড হচ্ছে');}
+function exportJSON(){const b=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='skyhara-backup-'+today()+'.json';a.click();toast('JSON ব্যাকআপ ডাউনলোড হচ্ছে');}
+function handleImport(e){const file=e.target.files[0];if(!file)return;const r=new FileReader();r.onload=ev=>{try{const d=JSON.parse(ev.target.result);if(!d.orders){toast('ভুল ফাইল','error');return;}if(!confirm('ইম্পোর্ট করলে বর্তমান ডেটা মুছে যাবে। চালাবো?'))return;db={...db,...d};persist();toast('✓ ইম্পোর্ট সফল');renderDashboard();}catch{toast('ইম্পোর্ট ব্যর্থ','error');}};r.readAsText(file);}
+function clearAllData(){if(!confirm('সব ডেটা মুছে যাবে। নিশ্চিত?'))return;if(!confirm('সত্যিই?'))return;db={orders:[],expenses:[],personal:[],loans:[],loanPayments:[]};persist();toast('মুছে গেছে','error');renderDashboard();}
+
+/* ══ TOAST ══ */
+function toast(msg,type='success'){const el=document.createElement('div');el.className=`toast ${type}`;el.textContent=msg;document.getElementById('toast-wrap').appendChild(el);setTimeout(()=>el.remove(),3200);}
+
+/* ══ KEYBOARD ══ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape')['order-modal','expense-modal','personal-modal','loan-modal','loan-payment-modal','order-detail-modal'].forEach(closeModal);
+  if(e.key==='n'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) openExpenseModal();
+  if(e.key==='p'&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) openPersonalModal();
+});
+
+/* ══ START ══ */
+boot();
+</script>
+</body>
+</html>
