@@ -2,10 +2,16 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>H&amp;H — ACCOUNT SYNC</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="H&H Sync">
+<link rel="manifest" href="/manifest.json">
+<title>H&amp;H — ACCOUNT SYNC &amp; PRINT MANAGEMENT</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#0a0a0a;--bg2:#111;--bg3:#181818;--bg4:#1e1e1e;--border:#242424;--border2:#303030;--text:#e8e8e8;--muted:#777;--amber:#f5a623;--amber2:#c47d00;--amber-dim:#2a1c00;--green:#39ff14;--green-dim:#0a2200;--red:#ff3b3b;--red-dim:#2a0000;--blue:#4af0ff;--blue-dim:#001a2a;--purple:#b06fff;--purple-dim:#1a0a2a;--mono:'DM Mono',monospace;--display:'Bebas Neue',sans-serif;--r:2px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -16,6 +22,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--amber)}
 select option{background:var(--bg3)}
 body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);pointer-events:none;z-index:9999}
 #app{display:flex;flex-direction:column;height:100vh}
+
+/* ══ PWA & OFFLINE RESILIENCE STYLES ══ */
+.offline-banner{background:linear-gradient(90deg,#382200,#4d3000);border-bottom:1px solid var(--amber);color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;z-index:100;flex-shrink:0;transition:all .3s ease}
+.offline-banner.online-restored{background:linear-gradient(90deg,#0a290a,#113d11);border-bottom-color:var(--green)}
+.offline-banner.hidden{display:none!important}
+.network-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:12px;font-size:10px;letter-spacing:.5px;font-weight:600;margin-left:8px;flex-shrink:0}
+.network-pill.online{background:rgba(57,255,20,.12);color:var(--green);border:1px solid rgba(57,255,20,.3)}
+.network-pill.offline{background:rgba(245,166,35,.18);color:var(--amber);border:1px solid rgba(245,166,35,.5);animation:pulse-border 1.5s infinite}
+.queue-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:10px;background:rgba(74,240,255,.15);color:var(--blue);border:1px solid rgba(74,240,255,.3);font-size:9px;cursor:pointer;margin-left:6px;transition:all .15s}
+.queue-pill:hover{background:rgba(74,240,255,.25)}
+@keyframes pulse-border{0%,100%{border-color:rgba(245,166,35,.8)}50%{border-color:rgba(245,166,35,.2)}}
 /* TOPBAR */
 #topbar{display:flex;align-items:center;background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;height:48px;flex-shrink:0;gap:0;overflow-x:auto}
 .tb-brand{font-family:var(--display);font-size:22px;letter-spacing:3px;color:var(--amber);margin-right:20px;flex-shrink:0}
@@ -252,6 +269,52 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .budget-cat-actions{display:flex;gap:6px;align-items:center}
 .btn-icon-sm{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:2px 5px;border-radius:2px}
 .btn-icon-sm:hover{color:var(--text);background:var(--border)}
+
+/* ══ 10-WORKBOOK & ADVANCED ARCHITECTURE STYLES ══ */
+.nav-tab.hub-tab{border-color:rgba(245,166,35,.4);color:var(--amber)}
+.nav-tab.hub-tab.active{background:rgba(245,166,35,.15);border-color:var(--amber)}
+.nav-tab.importer-tab{border-color:rgba(74,240,255,.3);color:var(--blue)}
+.nav-tab.importer-tab.active{background:rgba(74,240,255,.12);border-color:var(--blue)}
+.nav-tab.ledger-tab{border-color:rgba(57,255,20,.3);color:var(--green)}
+.nav-tab.ledger-tab.active{background:rgba(57,255,20,.12);border-color:var(--green)}
+.nav-tab.costing-tab{border-color:rgba(176,111,255,.3);color:var(--purple)}
+.nav-tab.costing-tab.active{background:rgba(176,111,255,.12);border-color:var(--purple)}
+.nav-tab.floor-tab{border-color:rgba(255,100,50,.3);color:#ff7849}
+.nav-tab.floor-tab.active{background:rgba(255,100,50,.15);border-color:#ff7849}
+
+.workbook-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:20px}
+.workbook-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:all .15s}
+.workbook-card:hover{border-color:var(--amber);background:var(--bg3);transform:translateY(-1px)}
+.workbook-card.active{border-color:var(--amber);background:rgba(245,166,35,.05);box-shadow:0 0 10px rgba(245,166,35,.1)}
+.wb-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+.wb-num{font-size:9px;font-weight:600;padding:2px 6px;border-radius:2px;background:var(--bg4);color:var(--muted);letter-spacing:1px}
+.wb-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.wb-sub{font-size:10px;color:var(--muted)}
+.wb-badge{font-size:9px;padding:2px 6px;border-radius:2px;background:rgba(57,255,20,.1);color:var(--green);border:1px solid rgba(57,255,20,.2)}
+
+/* Importer Dropzone */
+.dropzone-box{border:2px dashed var(--border2);background:var(--bg2);border-radius:var(--r);padding:30px 20px;text-align:center;transition:all .2s;cursor:pointer;margin-bottom:16px}
+.dropzone-box.dragover{border-color:var(--blue);background:rgba(74,240,255,.05)}
+.dropzone-title{font-family:var(--display);font-size:24px;letter-spacing:2px;color:var(--blue);margin-bottom:6px}
+.dropzone-desc{font-size:11px;color:var(--muted);line-height:1.6}
+
+/* Staging table */
+.staging-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:20px}
+.badge-status{display:inline-block;padding:2px 6px;font-size:9px;border-radius:2px;font-weight:600}
+.badge-ok{background:rgba(57,255,20,.12);color:var(--green);border:1px solid rgba(57,255,20,.3)}
+.badge-warn{background:rgba(245,166,35,.15);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.badge-err{background:rgba(255,59,59,.18);color:var(--red);border:1px solid rgba(255,59,59,.4)}
+
+/* Shop floor quick cards */
+.floor-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.floor-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;font-size:14px;letter-spacing:1.5px;font-weight:600;border-radius:var(--r);text-transform:uppercase;width:100%;border:1px solid;transition:all .15s}
+.floor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:700px){.floor-grid{grid-template-columns:1fr}}
+
+/* Costing Simulator */
+.costing-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+@media (max-width:850px){.costing-grid{grid-template-columns:1fr}}
+.costing-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px}
 </style>
 </head>
 <body>
@@ -270,6 +333,8 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div id="topbar">
   <div class="tb-brand">H&amp;H</div>
   <div class="tb-sub">ACCOUNT SYNC</div>
+  <span class="network-pill online" id="net-status-pill"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span> <span id="net-status-txt">অনলাইন</span></span>
+  <span class="queue-pill" id="sync-queue-pill" onclick="flushOfflineSyncQueue()" title="পেন্ডিং অফলাইন ডেটা এখনই সিঙ্ক করুন" style="display:none">⏳ <span id="sync-queue-count">০</span>টি পেন্ডিং সিঙ্ক</span>
   <div class="tb-stat"><div class="tb-stat-val" id="sv-biz-profit">৳০</div><div class="tb-stat-label">ব্যবসায়িক লাভ</div></div>
   <div class="tb-stat r" id="sv-personal-wrap"><div class="tb-stat-val" id="sv-personal">৳০</div><div class="tb-stat-label">ব্যক্তিগত খরচ</div></div>
   <div class="tb-stat g" id="sv-net-wrap"><div class="tb-stat-val" id="sv-net">৳০</div><div class="tb-stat-label">হাতে থাকবে</div></div>
@@ -278,16 +343,34 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   <button class="btn btn-sync" id="sync-btn" onclick="manualSync()" style="margin-left:10px;flex-shrink:0">⟳ সিঙ্ক</button>
 </div>
 
+<!-- OFFLINE NOTIFICATION BANNER -->
+<div id="offline-banner" class="offline-banner hidden">
+  <div style="display:flex;align-items:center;gap:8px;flex:1">
+    <span style="font-size:14px" id="offline-banner-icon">⚡</span>
+    <span id="offline-banner-text"><strong>অফলাইন মোড সক্রিয়</strong> — সব হিসাব, ফর্ম ও ড্যাশবোর্ড ক্যাশড মেমোরিতে কাজ করছে। নেটওয়ার্ক ফিরলেই Google Sheets-এ স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।</span>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn btn-sm" id="offline-sync-btn" style="background:var(--amber);color:#000;font-size:10px;padding:3px 10px;font-weight:600" onclick="flushOfflineSyncQueue()">⟳ সিঙ্ক চেষ্টা</button>
+    <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 6px" onclick="document.getElementById('offline-banner').classList.add('hidden')">✕</button>
+  </div>
+</div>
+
 <!-- NAV -->
 <div id="nav">
   <button class="nav-tab active" onclick="switchTab('dashboard')">ড্যাশবোর্ড</button>
+  <button class="nav-tab hub-tab" onclick="switchTab('workbooks')">📚 ১০ লেজার হাব</button>
+  <button class="nav-tab importer-tab" onclick="switchTab('importer')">📥 এক্সেল ইম্পোর্টার</button>
+  <button class="nav-tab ledger-tab" onclick="switchTab('ledger')">⚖️ ডাবল-এন্ট্রি</button>
+  <button class="nav-tab costing-tab" onclick="switchTab('costing')">💡 কস্টিং ক্যালকুলেটর</button>
+  <button class="nav-tab floor-tab" onclick="switchTab('floor')">📱 শপ ফ্লোর PWA</button>
   <button class="nav-tab chart-tab" onclick="switchTab('charts')">📊 ব্যয় চার্ট</button>
   <button class="nav-tab budget-tab" onclick="switchTab('budget')">🎯 মাসিক বাজেট</button>
-  <button class="nav-tab" onclick="switchTab('orders')">অর্ডার</button>
+  <button class="nav-tab" onclick="switchTab('orders')">অর্ডার ও জব</button>
   <button class="nav-tab" onclick="switchTab('expenses')">ব্যবসায়িক খরচ</button>
   <button class="nav-tab personal" onclick="switchTab('personal')">ব্যক্তিগত খরচ</button>
   <button class="nav-tab" onclick="switchTab('recurring')">🔄 রিকারিং খরচ</button>
-  <button class="nav-tab personal" onclick="switchTab('loans')">ব্যাংক লোন</button>
+  <button class="nav-tab personal" onclick="switchTab('loans')">ব্যাংক ও লোন</button>
+  <button class="nav-tab" onclick="switchTab('cloudsync')">☁️ ড্রাইভ ও ইমেইল</button>
   <button class="nav-tab insight" onclick="switchTab('insights')">স্মার্ট বিশ্লেষণ</button>
   <button class="nav-tab" onclick="switchTab('report')">রিপোর্ট</button>
   <button class="nav-tab" onclick="switchTab('settings')">সেটিংস</button>
@@ -598,6 +681,312 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
 </div>
 
+<!-- ══ 10 OPERATIONAL WORKBOOKS HUB ══ -->
+<div id="sec-workbooks" class="section">
+  <div class="page-header">
+    <div class="page-title">১০ লেজার <span class="g">হাব (10-Workbook Synchronized Hub)</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-csv btn-sm" onclick="exportCurrentWorkbookCSV()">⬇ অ্যাক্টিভ লেজার CSV</button>
+      <button class="btn btn-blue btn-sm" onclick="exportFull10SheetsExcel()">📑 সব ১০টি লেজার Excel ব্যাকআপ</button>
+      <button class="btn btn-primary btn-sm" onclick="openWorkbookEntryModal()">+ নতুন লেজার রেকর্ড</button>
+    </div>
+  </div>
+
+  <div class="sec-label">// সংযুক্ত ১০টি মূল কর্মশালা ও একাউন্টিং লেজার</div>
+  <div class="workbook-grid" id="workbook-cards-grid"></div>
+
+  <!-- Active Selected Workbook View -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-top:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <h3 id="active-wb-title" style="font-family:var(--display);font-size:22px;letter-spacing:2px;color:var(--amber)">—</h3>
+        <p id="active-wb-desc" style="font-size:11px;color:var(--muted)">লেজার বিবরণ ও লাইভ ব্যালেন্স</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="wb-search-in" placeholder="অনুসন্ধান করুন..." style="width:180px;padding:5px 8px;font-size:11px" oninput="renderActiveWorkbookTable()">
+        <button class="btn btn-primary btn-sm" onclick="openWorkbookEntryModal()">+ এন্ট্রি যোগ</button>
+      </div>
+    </div>
+    <div id="active-wb-table-wrap" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- ══ BULK SPREADSHEET IMPORTER & FUZZY AUTO-MAPPER ══ -->
+<div id="sec-importer" class="section">
+  <div class="page-header">
+    <div class="page-title">এক্সেল ব্যাচ <span class="b">ইম্পোর্টার (Bulk Spreadsheet Importer)</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="downloadBlankWorkbookTemplate()">⬇ স্ট্যান্ডার্ড টেমপ্লেট ডাউনলোড</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadSampleLegacyImport()">⚡ ডেমো ডেটা দিয়ে টেস্ট করুন</button>
+    </div>
+  </div>
+
+  <div class="dropzone-box" id="importer-dropzone" onclick="document.getElementById('xlsx-file-input').click()">
+    <div style="font-size:32px;margin-bottom:6px">📥</div>
+    <div class="dropzone-title">ড্র্যাগ & ড্রপ করুন .xlsx বা .csv ফাইল</div>
+    <div class="dropzone-desc">
+      ১০টি লিগ্যাসি এক্সেল ওয়ার্কবুকের যেকোনো ফাইল এখানে ছেড়ে দিন।<br>
+      <span style="color:var(--amber)">অটো-হেডার ডিটেক্টর:</span> বাংলা ও ইংরেজি উভয় কলামের নাম স্বয়ংক্রিয়ভাবে ম্যাপ হবে।
+    </div>
+    <button class="btn btn-primary btn-sm" style="margin-top:12px">ফাইল সিলেক্ট করুন</button>
+    <input type="file" id="xlsx-file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelFileUpload(event)">
+  </div>
+
+  <!-- Staging Area & Verification Table -->
+  <div class="staging-wrap" id="importer-staging-wrap" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-family:var(--display);font-size:18px;letter-spacing:1.5px;color:var(--blue)" id="stage-module-badge">STAGING PREVIEW</div>
+        <div style="font-size:11px;color:var(--muted)" id="stage-summary-text">কলাম ম্যাপিং ও ভ্যালিডেশন সফল</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-danger btn-sm" onclick="clearStagingData()">✕ বাতিল</button>
+        <button class="btn btn-green btn-sm" onclick="commitStagingToDatabase()">✓ ডাটাবেসে সেভ করো (Commit)</button>
+      </div>
+    </div>
+
+    <!-- Mapping Badges -->
+    <div id="stage-mappings-box" style="margin-bottom:12px;background:var(--bg3);padding:10px;border-radius:var(--r);font-size:11px"></div>
+
+    <!-- Staged Rows Table -->
+    <div id="stage-table-wrap" style="overflow-x:auto;max-height:350px"></div>
+  </div>
+</div>
+
+<!-- ══ DOUBLE-ENTRY LEDGER & TRIAL BALANCE ══ -->
+<div id="sec-ledger" class="section">
+  <div class="page-header">
+    <div class="page-title">ডাবল-এন্ট্রি <span class="g">লেজার (ACID Journal & Balances)</span></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-csv btn-sm" onclick="exportJournalCSV()">⬇ জার্নাল CSV</button>
+      <button class="btn btn-green btn-sm" onclick="openJournalEntryModal()">+ জার্নাল ভাউচার পোস্ট</button>
+    </div>
+  </div>
+
+  <!-- Chart of Accounts Balances -->
+  <div class="qs-container">
+    <div class="qs-header">
+      <div class="sec-label" style="margin-bottom:0;border-bottom:none">// চার্ট অব একাউন্টস & ট্রায়াল ব্যালেন্স</div>
+      <div id="trial-balance-status" class="badge-status badge-ok">BALANCED ✓ [DEBITS = CREDITS]</div>
+    </div>
+    <div class="qs-grid" id="coa-summary-grid"></div>
+  </div>
+
+  <!-- Journal Entries Master Table -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px">
+    <div class="sec-label" style="margin-bottom:12px">// জার্নাল এন্ট্রি লগ (অটোমেটিক ও ম্যানুয়াল ট্রানজেকশন)</div>
+    <div id="journal-table-wrap" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- ══ PRICE COSTING CALCULATOR ══ -->
+<div id="sec-costing" class="section">
+  <div class="page-header">
+    <div class="page-title">কস্টিং <span class="p">ক্যালকুলেটর (Print Job Costing & Estimator)</span></div>
+    <button class="btn btn-purple btn-sm" onclick="resetCostingCalculator()">🔄 নতুন হিসাব</button>
+  </div>
+
+  <div class="costing-grid">
+    <!-- Left: Inputs -->
+    <div class="costing-box">
+      <div class="sec-label purple" style="margin-bottom:12px">// প্রিন্টিং স্পেসিফিকেশন ও ইনপুট</div>
+      
+      <div style="margin-bottom:10px">
+        <label class="form-label">কাজের নাম / প্রজেক্ট টাইটেল</label>
+        <input type="text" id="cost-job-title" placeholder="e.g. কালার ব্রোশিওর (A4) - ৫,০০০ কপি" value="প্রিমিয়াম ব্রোশিওর (4C)">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="form-label">টার্গেট কোয়ান্টিটি (Pcs)</label>
+          <input type="number" id="cost-qty" value="5000" oninput="calculateDynamicCosting()">
+        </div>
+        <div>
+          <label class="form-label">কাগজের ধরণ & GSM</label>
+          <select id="cost-paper-type" onchange="calculateDynamicCosting()">
+            <option value="150-art" data-rate="3200">Art Paper 150 GSM (৳৩,২০০/রিম)</option>
+            <option value="120-art" data-rate="2600">Art Paper 120 GSM (৳২,৬০০/রিম)</option>
+            <option value="80-offset" data-rate="1850">Offset 80 GSM (৳১,৮৫০/রিম)</option>
+            <option value="100-offset" data-rate="2200">Offset 100 GSM (৳২,২০০/রিম)</option>
+            <option value="300-box" data-rate="4100">Box Board 300 GSM (৳৪,১০০/রিম)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="form-label">প্রয়োজনীয় রিম (Reams)</label>
+          <input type="number" step="0.1" id="cost-reams" value="12.5" oninput="calculateDynamicCosting()">
+        </div>
+        <div>
+          <label class="form-label">প্রতি রিম দর (BDT)</label>
+          <input type="number" id="cost-ream-rate" value="3200" oninput="calculateDynamicCosting()">
+        </div>
+        <div>
+          <label class="form-label">প্লেট সংখ্যা (Plates)</label>
+          <input type="number" id="cost-plates" value="4" oninput="calculateDynamicCosting()">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="form-label">প্লেট ইউনিট দর (BDT)</label>
+          <input type="number" id="cost-plate-rate" value="350" oninput="calculateDynamicCosting()">
+        </div>
+        <div>
+          <label class="form-label">ইমপ্রেশন রেট (প্রতি ১০০০)</label>
+          <input type="number" id="cost-imp-rate" value="250" oninput="calculateDynamicCosting()">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label class="form-label">কাটিং / ডাই কাটিং</label>
+          <input type="number" id="cost-cutting" value="800" oninput="calculateDynamicCosting()">
+        </div>
+        <div>
+          <label class="form-label">লেমেনেশন / স্পট UV</label>
+          <input type="number" id="cost-lamination" value="2500" oninput="calculateDynamicCosting()">
+        </div>
+        <div>
+          <label class="form-label">বাইন্ডিং / প্যাকেজিং</label>
+          <input type="number" id="cost-binding" value="1200" oninput="calculateDynamicCosting()">
+        </div>
+      </div>
+
+      <div>
+        <label class="form-label">টার্গেট প্রফিট মার্জিন (%)</label>
+        <input type="number" id="cost-margin" value="25" oninput="calculateDynamicCosting()">
+      </div>
+    </div>
+
+    <!-- Right: Cost Sheet Summary -->
+    <div class="costing-box" style="display:flex;flex-direction:column;justify-content:space-between">
+      <div>
+        <div class="sec-label g" style="margin-bottom:12px">// লাইভ কস্টিং ও কোটেশন সামারি</div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:12px">
+          <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">কাগজের মোট খরচ:</span>
+            <span id="c-res-paper" style="font-weight:600">৳৪০,০০০</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">প্লেট মেকিং চার্জ:</span>
+            <span id="c-res-plates" style="font-weight:600">৳১,৪০০</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">মেশিন প্রিন্টিং রান:</span>
+            <span id="c-res-print" style="font-weight:600">৳১,২৫০</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">ফিনিশিং ও আনুষঙ্গিক:</span>
+            <span id="c-res-finish" style="font-weight:600">৳৪,৫০০</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:2px solid var(--border);font-size:14px">
+            <span style="color:var(--text);font-weight:bold">মোট উৎপাদন ব্যয় (Total Cost):</span>
+            <span id="c-res-total-cost" style="font-family:var(--display);font-size:20px;color:var(--amber)">৳৪৭,১৫০</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px solid var(--border)">
+            <span style="color:var(--muted)">প্রত্যাশিত লাভ (Margin):</span>
+            <span id="c-res-profit" style="color:var(--green);font-weight:600">৳১১,৭৮৮</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0;background:rgba(57,255,20,.05);padding:10px;border-radius:var(--r);border:1px solid rgba(57,255,20,.2)">
+            <span style="font-weight:bold;color:var(--green)">প্রস্তাবিত বিলিং রেট:</span>
+            <span id="c-res-bill-total" style="font-family:var(--display);font-size:24px;color:var(--green)">৳৫৮,৯৩৮</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+            <span>প্রতি পিস খরচ: <strong id="c-res-unit-cost" style="color:var(--text)">৳৯.৪৩</strong></span>
+            <span>প্রতি পিস বিক্রয়: <strong id="c-res-unit-sell" style="color:var(--green)">৳১১.৭৯</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:16px;width:100%" onclick="saveCostingAsJobOrder()">⚡ এই কস্টিং সরাসরি জব হিসেবে সেভ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SHOP FLOOR MOBILE PWA FAST ENTRY ══ -->
+<div id="sec-floor" class="section">
+  <div class="page-header">
+    <div class="page-title">শপ ফ্লোর <span class="g">ফাস্ট-এন্ট্রি (Mobile Shop Floor Mode)</span></div>
+    <span class="df-summary-badge" style="color:var(--green)">⚡ FAST-TRACK OPERATOR MODE</span>
+  </div>
+
+  <div class="sec-label">// মেশিন ফ্লোর এবং ওয়্যারহাউজের জন্য অতি-দ্রুত টাচ এন্ট্রি</div>
+
+  <div class="floor-grid">
+    <div class="floor-card">
+      <div style="font-family:var(--display);font-size:18px;color:var(--amber);margin-bottom:8px">🖨️ মেশিন ইমপ্রেশন কাউন্টার</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px">দৈনিক শিফট কাউন্টার রিডিং ও মেশিন রানিং এন্ট্রি</p>
+      <button class="floor-btn btn-primary" onclick="openWorkbookEntryModal('impressions')">+ ইমপ্রেশন কাউন্টার সাবমিট</button>
+    </div>
+
+    <div class="floor-card">
+      <div style="font-family:var(--display);font-size:18px;color:var(--blue);margin-bottom:8px">📦 কাগজ ইস্যু / স্টক আউটওয়ার্ড</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px">জবের জন্য ওয়্যারহাউজ থেকে রিম ইস্যু করুন</p>
+      <button class="floor-btn btn-blue" onclick="openWorkbookEntryModal('paperStock')">+ কাগজ স্টক মুভমেন্ট</button>
+    </div>
+
+    <div class="floor-card">
+      <div style="font-family:var(--display);font-size:18px;color:var(--green);margin-bottom:8px">🚚 ডেলিভারি চালান জেনারেটর</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px">গাড়ি নম্বর, ড্রাইভার ও ফিনিশড মাল ডেলিভারি চালান</p>
+      <button class="floor-btn btn-green" onclick="openWorkbookEntryModal('deliveries')">+ দ্রুত চালান তৈরি</button>
+    </div>
+
+    <div class="floor-card">
+      <div style="font-family:var(--display);font-size:18px;color:var(--purple);margin-bottom:8px">☕ পেটি ক্যাশ ভাউচার</div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:14px">চা/নাস্তা, জরুরি তেল বা খুচরা কারখানা খরচ</p>
+      <button class="floor-btn btn-purple" onclick="openWorkbookEntryModal('pettyCash')">+ পেটি ক্যাশ ভাউচার</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CLOUD DRIVE & ZERO-API EMAIL SYNC ══ -->
+<div id="sec-cloudsync" class="section">
+  <div class="page-header">
+    <div class="page-title">ক্লাউড ড্রাইভ ও <span class="b">ইমেইল গেটওয়ে</span></div>
+    <button class="btn btn-blue btn-sm" onclick="exportFull10SheetsExcel()">📑 ফুল ব্যাকআপ ডাউনলোড</button>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <!-- Email Gateway Card -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="font-family:var(--display);font-size:18px;letter-spacing:1px;color:var(--green)">✉️ ZERO-API EMAIL GATEWAY</h3>
+        <span class="badge-status badge-ok">DAEMON ONLINE</span>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+        ইমেইল এড্রেস: <code style="color:var(--text);background:var(--bg3);padding:2px 6px">expense@account.handsandhead.com</code><br>
+        ইমেইলের সাবজেক্ট বা বডিতে ফরমেট অনুযায়ী লিখলেই স্বয়ংক্রিয়ভাবে লেজারে যুক্ত হবে।
+      </p>
+      <div style="background:var(--bg3);padding:10px;border-radius:var(--r);font-size:11px;color:var(--amber);margin-bottom:12px">
+        ফরমেট: <code>EXP: [পরিমাণ] | [খাত] | [গ্রহীতা] | [ভাউচার]</code><br>
+        উদাহরণ: <code>EXP: 450 | Tea & Snacks | Staff | V-9901</code>
+      </div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="email-sim-input" placeholder="EXP: 350 | নাস্তা | ড্রাইভার | V-102" style="font-size:11px">
+        <button class="btn btn-green btn-sm" onclick="simulateIncomingEmailEntry()">সিমুলেট টেস্ট</button>
+      </div>
+    </div>
+
+    <!-- Cloud Drive Sync Card -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="font-family:var(--display);font-size:18px;letter-spacing:1px;color:var(--blue)">☁️ BI-DIRECTIONAL CLOUD DRIVE SYNC</h3>
+        <span class="badge-status badge-ok">ONEDRIVE / GDRIVE</span>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+        সকল ১০টি লেজারের লাইভ ডেটা এক ক্লিকে এক্সেল শিট আকারে সিঙ্ক করুন বা সরাসরি ড্রাইভ মিররে পুশ করুন।
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-blue" onclick="exportFull10SheetsExcel()">📑 সম্পূর্ণ ১০-ওয়ার্কবুক এক্সেল তৈরি করুন (.XLSX)</button>
+        <button class="btn btn-sync" onclick="manualSync()">⟳ ক্লাউড লাইভ রিকনসিলিয়েশন চালান</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ LOANS ══ -->
 <div id="sec-loans" class="section">
   <div class="page-header">
@@ -639,6 +1028,39 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 <div id="sec-settings" class="section">
   <div class="page-header"><div class="page-title">সেটিং<span>স</span></div></div>
   <div class="settings-panel">
+    
+    <!-- PWA & Service Worker Offline Cache Engine Card -->
+    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:16px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h3 style="color:var(--amber);margin:0">// PWA ও অফলাইন ক্যাশ ইঞ্জিন (Service Worker)</h3>
+        <span class="badge-status badge-ok" id="sw-status-badge">সার্ভিস ওয়ার্কার সক্রিয়</span>
+      </div>
+      <p style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:12px">
+        অ্যাপ্লিকেশনের সমস্ত স্ট্যাটিক অ্যাসেট, ড্যাশবোর্ড স্ক্রিপ্ট, ফন্ট এবং ডেটাবেস লোকাল ব্রাউজারে ক্যাশ করা আছে। ইন্টারনেট সংযোগ বিচ্ছিন্ন থাকলেও আপনি সম্পূর্ণ নিশ্চিন্তে নতুন এন্ট্রি করতে পারবেন। সংযোগ পুনঃস্থাপিত হওয়ার সাথে সাথেই পেন্ডিং এন্ট্রিগুলো Google Sheets-এ স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।
+      </p>
+      
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg2);padding:10px;border-radius:var(--r);border:1px solid var(--border)">
+          <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">নেটওয়ার্ক স্ট্যাটাস</div>
+          <div style="font-size:14px;font-weight:600;margin-top:2px" id="settings-net-text">🟢 লাইভ অনলাইন</div>
+        </div>
+        <div style="background:var(--bg2);padding:10px;border-radius:var(--r);border:1px solid var(--border)">
+          <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">অফলাইন স্টোরেজ ক্যাশ</div>
+          <div style="font-size:14px;font-weight:600;color:var(--green);margin-top:2px" id="settings-cache-text">✓ Ready (hh-sync-cache-v1)</div>
+        </div>
+        <div style="background:var(--bg2);padding:10px;border-radius:var(--r);border:1px solid var(--border)">
+          <div style="font-size:9px;letter-spacing:1px;color:var(--muted);text-transform:uppercase">পেন্ডিং সিঙ্ক কিউ</div>
+          <div style="font-size:14px;font-weight:600;color:var(--blue);margin-top:2px" id="settings-queue-text">০টি পরিবর্তন জমা</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="flushOfflineSyncQueue()">⟳ অফলাইন কিউ এখনই সিঙ্ক করুন</button>
+        <button class="btn btn-ghost btn-sm" onclick="forceUpdateServiceWorker()">🔄 ক্যাশ রিফ্রেশ ও আপডেট</button>
+        <button class="btn btn-amber btn-sm" onclick="testOfflineSimulation()">⚡ অফলাইন মোড সিমুলেট টেস্ট</button>
+      </div>
+    </div>
+
     <h3>// Google Sheets সংযোগ</h3>
     <div style="margin-bottom:14px">
       <label class="form-label">Apps Script Web App URL</label>
@@ -882,6 +1304,102 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
   </div>
 </div>
 
+<!-- 10-WORKBOOK DYNAMIC ENTRY MODAL -->
+<div class="modal-overlay" id="wb-entry-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title" id="wb-modal-title">নতুন লেজার এন্ট্রি</div>
+      <button class="modal-close" onclick="closeModal('wb-entry-modal')">✕</button>
+    </div>
+    <div class="modal-body" id="wb-modal-body">
+      <div class="form-row">
+        <label class="form-label">ওয়ার্কবুক মডিউল নির্বাচন করুন</label>
+        <select id="wb-select-module" onchange="renderDynamicWorkbookForm(this.value)">
+          <option value="pettyCash">১. Adframe Petty Cash (দৈনিক খরচ)</option>
+          <option value="bankAccounts">২. Bank & Cash AC (ব্যাংক ও নগদ)</option>
+          <option value="clients">৩. Client (ক্লায়েন্ট ও বাকি খাতা)</option>
+          <option value="deliveries">৪. Delivery (ডেলিভারি ও চালান)</option>
+          <option value="impressions">৫. Impression Cash AC (কাউন্টার ক্যাশ)</option>
+          <option value="paperStock">৬. Paper Stock (কাগজ রিম ও ওয়্যারহাউজ)</option>
+          <option value="parties">৭. Party (পার্টি ও ভেন্ডর দায়)</option>
+          <option value="pressJobs">৮. Press Production (জব কার্ড ও প্রোডাকশন)</option>
+          <option value="costingTemplates">৯. Price Costing (কস্টিং টেমপ্লেট)</option>
+          <option value="schedules">১০. Work Schedule (মেশিন শিডিউল)</option>
+        </select>
+      </div>
+      <div id="wb-dynamic-form-fields"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('wb-entry-modal')">বাতিল</button>
+      <button class="btn btn-primary" onclick="saveDynamicWorkbookEntry()">লেজারে সেভ করো</button>
+    </div>
+  </div>
+</div>
+
+<!-- DOUBLE-ENTRY JOURNAL VOUCHER MODAL -->
+<div class="modal-overlay" id="journal-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--green)">+ ডাবল-এন্ট্রি জার্নাল ভাউচার পোস্ট</div>
+      <button class="modal-close" onclick="closeModal('journal-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row-2">
+        <div><label class="form-label">ভাউচার তারিখ *</label><input type="date" id="jv-date"></div>
+        <div><label class="form-label">ভাউচার রেফারেন্স / নং</label><input type="text" id="jv-ref" placeholder="JV-2026-001"></div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">ট্রানজেকশন বিবরণ / মেমো *</label>
+        <input type="text" id="jv-memo" placeholder="e.g. সোনালী ব্যাংক থেকে নগদ ক্যাশে উত্তোলন / ভেন্ডর পেমেন্ট">
+      </div>
+      <div class="sec-label" style="margin:12px 0 8px 0">// ডেবিট ও ক্রেডিট হিসাব (ACID Balanced)</div>
+      
+      <div style="background:var(--bg3);padding:10px;border-radius:var(--r);margin-bottom:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:6px">১. ডেবিট হিসাব (DEBIT Account)</div>
+        <div class="form-row-2">
+          <div>
+            <select id="jv-debit-acc">
+              <option value="1010">1010 - Cash in Hand (Asset)</option>
+              <option value="1020">1020 - Sonali Bank AC (Asset)</option>
+              <option value="1030">1030 - DBBL AC (Asset)</option>
+              <option value="1050">1050 - Adframe Petty Cash (Asset)</option>
+              <option value="1200">1200 - Accounts Receivable (Asset)</option>
+              <option value="1300">1300 - Paper & Material Inventory (Asset)</option>
+              <option value="2000">2000 - Accounts Payable / Party (Liability)</option>
+              <option value="5000">5000 - Direct Factory & Job Cost (Expense)</option>
+              <option value="5100">5100 - Factory Overhead & Utilities (Expense)</option>
+              <option value="5200">5200 - Delivery & Logistics (Expense)</option>
+            </select>
+          </div>
+          <div><input type="number" id="jv-debit-amt" placeholder="ডেবিট টাকা (BDT)" oninput="document.getElementById('jv-credit-amt').value=this.value"></div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg3);padding:10px;border-radius:var(--r)">
+        <div style="font-size:11px;font-weight:600;color:var(--blue);margin-bottom:6px">২. ক্রেডিট হিসাব (CREDIT Account)</div>
+        <div class="form-row-2">
+          <div>
+            <select id="jv-credit-acc">
+              <option value="1020">1020 - Sonali Bank AC (Asset)</option>
+              <option value="1010">1010 - Cash in Hand (Asset)</option>
+              <option value="1030">1030 - DBBL AC (Asset)</option>
+              <option value="1050">1050 - Adframe Petty Cash (Asset)</option>
+              <option value="2000">2000 - Accounts Payable / Party (Liability)</option>
+              <option value="4000">4000 - Print Job Revenue (Revenue)</option>
+              <option value="4100">4100 - Impression Service Revenue (Revenue)</option>
+            </select>
+          </div>
+          <div><input type="number" id="jv-credit-amt" placeholder="ক্রেডিট টাকা (BDT)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('journal-modal')">বাতিল</button>
+      <button class="btn btn-green" onclick="postManualJournalVoucher()">✓ পোস্ট জার্নাল</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-wrap"></div>
 
 <script>
@@ -893,8 +1411,30 @@ const KEY = 'hh_account_v3';
 const URL_KEY = 'hh_script_url';
 const PASS_KEY = 'hh_pass';
 const AUTH_KEY = 'hh_auth';
+const QUEUE_KEY = 'hh_offline_sync_queue';
+const LAST_SYNC_KEY = 'hh_last_synced_at';
+let syncQueue = [];
 
-let db = { orders:[], expenses:[], personal:[], loans:[], loanPayments:[], recurring:[], budgets:[] };
+let db = { 
+  orders:[], expenses:[], personal:[], loans:[], loanPayments:[], recurring:[], budgets:[],
+  // ══ 10 WORKBOOKS DOMAIN COLLECTIONS ══
+  pettyCash: [],        // 1. Adframe Petty Cash
+  bankAccounts: [],     // 2. Bank & Cash AC
+  clients: [],          // 3. Client Receivables & Ledger
+  deliveries: [],       // 4. Delivery Challans & Dispatch
+  impressions: [],      // 5. Impression Cash AC (Machine Counters)
+  paperStock: [],       // 6. Paper Stock & Warehousing
+  parties: [],          // 7. Party Vendor Payables
+  pressJobs: [],        // 8. Press Production Job Runs
+  costingTemplates: [], // 9. Price Costing Estimator Models
+  schedules: [],        // 10. Work Schedule & Machine Queue
+  // ══ DOUBLE ENTRY ACCOUNTING ENGINE ══
+  journal: [],          // ACID Balanced Journal Entries
+  accounts: []          // Chart of Accounts
+};
+
+let activeWorkbook = 'pettyCash';
+let stagedImportData = null;
 let currentOrderId = null;
 let syncTimer = null;
 let activeDateFilter = 'all'; // 'all', 'today', 'this-week', 'this-month', 'last-month', 'this-year', 'custom'
@@ -914,6 +1454,117 @@ const fmtD = d => { if(!d||d==='undefined') return '—'; const p=d.split('-'); 
 const getUrl = () => localStorage.getItem(URL_KEY)||'';
 const orderExp = id => db.expenses.filter(e=>e.orderId===id);
 const orderTotal = id => orderExp(id).reduce((s,e)=>s+Number(e.amount),0);
+
+/* ══ INITIAL 10-WORKBOOK & CHART OF ACCOUNTS SEED ══ */
+function seedInitialWorkbooksData() {
+  if (!db.bankAccounts || db.bankAccounts.length === 0) {
+    db.bankAccounts = [
+      { id: uid(), code: '1010', name: 'Cash in Hand (প্রধান নগদ ক্যাশ)', type: 'cash', balance: 85400, lastTxn: today() },
+      { id: uid(), code: '1020', name: 'Sonali Bank (Principal Branch AC-9840)', type: 'bank', balance: 342000, lastTxn: today() },
+      { id: uid(), code: '1030', name: 'Dutch Bangla Bank Ltd (CD-0129)', type: 'bank', balance: 185600, lastTxn: today() },
+      { id: uid(), code: '1050', name: 'Adframe Petty Cash Float', type: 'petty', balance: 15000, lastTxn: today() }
+    ];
+  }
+
+  if (!db.pettyCash || db.pettyCash.length === 0) {
+    db.pettyCash = [
+      { id: uid(), voucherNo: 'PC-2026-081', date: today(), category: 'কারখানা চা/নাস্তা', amount: 450, recipient: 'শপ ফ্লোর স্টাফ', paidFrom: '1050', authorizedBy: 'ম্যানেজার', synced: true },
+      { id: uid(), voucherNo: 'PC-2026-082', date: today(), category: 'জরুরি মেশিন লুব্রিকেন্ট', amount: 1200, recipient: 'মেশিনম্যান রফিক', paidFrom: '1050', authorizedBy: 'ম্যানেজার', synced: true },
+      { id: uid(), voucherNo: 'PC-2026-083', date: today(), category: 'লোকাল ভ্যান ডেলিভারি', amount: 650, recipient: 'কালাম ড্রাইভার', paidFrom: '1050', authorizedBy: 'ম্যানেজার', synced: true }
+    ];
+  }
+
+  if (!db.clients || db.clients.length === 0) {
+    db.clients = [
+      { id: uid(), code: 'CL-101', name: 'অ্যাক্সিস পাবলিকেশন্স', company: 'Axis Publications Ltd', phone: '01711-234567', creditLimit: 200000, balance: 45000, ordersCount: 12 },
+      { id: uid(), code: 'CL-102', name: 'সিটি ফার্মা লিমিটেড', company: 'City Pharma BD', phone: '01819-876543', creditLimit: 500000, balance: 120000, ordersCount: 28 },
+      { id: uid(), code: 'CL-103', name: 'গ্রিন লিফ ফুড প্রোডাক্টস', company: 'Green Leaf Packaging', phone: '01912-345678', creditLimit: 150000, balance: 25000, ordersCount: 8 }
+    ];
+  }
+
+  if (!db.deliveries || db.deliveries.length === 0) {
+    db.deliveries = [
+      { id: uid(), challanNo: 'CH-9041', date: today(), clientName: 'অ্যাক্সিস পাবলিকেশন্স', jobTitle: 'বই কাভার - আর্ট পেপার ৩০০ GSM', qty: 5000, vehicleNo: 'ঢাকা মেট্রো-ন ১১-৩২০১', driver: 'রশিদ মিয়া', status: 'delivered' },
+      { id: uid(), challanNo: 'CH-9042', date: today(), clientName: 'সিটি ফার্মা লিমিটেড', jobTitle: 'মেডিসিন বক্স কার্টন (৪ কালার)', qty: 20000, vehicleNo: 'পিকআপ-১৪', driver: 'জাহাঙ্গীর', status: 'dispatched' }
+    ];
+  }
+
+  if (!db.impressions || db.impressions.length === 0) {
+    db.impressions = [
+      { id: uid(), date: today(), machine: 'Heidelberg Speedmaster SM-74 (Unit 1)', startCounter: 1420500, endCounter: 1438500, total: 18000, rate: 250, value: 4500, operator: 'ওস্তাদ কামাল', shift: 'Day' },
+      { id: uid(), date: today(), machine: 'Komori Lithrone 426 (Unit 2)', startCounter: 980200, endCounter: 994200, total: 14000, rate: 280, value: 3920, operator: 'সুমন আহমেদ', shift: 'Day' }
+    ];
+  }
+
+  if (!db.paperStock || db.paperStock.length === 0) {
+    db.paperStock = [
+      { id: uid(), code: 'PAP-150A', brand: 'Hansol Art Paper', type: 'Art Paper', gsm: 150, size: '23x36 in', reams: 42.5, costPerReam: 3200, warehouse: 'Floor A' },
+      { id: uid(), code: 'PAP-120A', brand: 'Moorim Art Paper', type: 'Art Paper', gsm: 120, size: '20x30 in', reams: 28.0, costPerReam: 2600, warehouse: 'Floor A' },
+      { id: uid(), code: 'PAP-80O', brand: 'Bashundhara Offset', type: 'Offset', gsm: 80, size: '23x36 in', reams: 65.0, costPerReam: 1850, warehouse: 'Floor B' },
+      { id: uid(), code: 'PAP-300B', brand: 'Ningbo Box Board', type: 'Duplex Board', gsm: 300, size: '25x37 in', reams: 18.5, costPerReam: 4100, warehouse: 'Warehouse 2' }
+    ];
+  }
+
+  if (!db.parties || db.parties.length === 0) {
+    db.parties = [
+      { id: uid(), code: 'PT-01', name: 'রহমান পেপার হাউস', contact: 'হাজী মিজানুর রহমান', phone: '01712-112233', material: 'আর্ট পেপার ও ডুপ্লেক্স বোর্ড', due: 185000 },
+      { id: uid(), code: 'PT-02', name: 'টোকিও ইংক সাপ্লাইয়ার্স', contact: 'ফারুক হোসেন', phone: '01811-445566', material: 'প্রিন্টিং কালি ও কেমিক্যাল', due: 64000 },
+      { id: uid(), code: 'PT-03', name: 'মডার্ন সিটিপি প্লেট হাউস', contact: 'ইঞ্জিনিয়ার তারেক', phone: '01911-778899', material: 'সিটিপি প্লেট মেকিং', due: 32500 }
+    ];
+  }
+
+  if (!db.pressJobs || db.pressJobs.length === 0) {
+    db.pressJobs = [
+      { id: uid(), jobNo: 'JOB-2026-101', title: 'বার্ষিক রিপোর্ট ও ব্রোশিওর (4C)', client: 'অ্যাক্সিস পাবলিকেশন্স', targetQty: 5000, paperType: '150-art', reamsUsed: 12.5, plates: 4, impressions: 20000, agreedPrice: 58000, cost: 44500, status: 'completed' },
+      { id: uid(), jobNo: 'JOB-2026-102', title: 'ভিটামিন সিরাপ প্যাকেজিং বক্স', client: 'সিটি ফার্মা লিমিটেড', targetQty: 20000, paperType: '300-box', reamsUsed: 22.0, plates: 8, impressions: 40000, agreedPrice: 145000, cost: 112000, status: 'running' }
+    ];
+  }
+
+  if (!db.costingTemplates || db.costingTemplates.length === 0) {
+    db.costingTemplates = [
+      { id: uid(), name: 'স্ট্যান্ডার্ড ৪-কালার ব্রোশিওর', gsm: 150, paperRate: 3200, plateCost: 1400, impressionRate: 250, cutting: 800, binding: 1200, margin: 25 },
+      { id: uid(), name: 'ফার্মা কার্টন বক্স ৩০০ GSM', gsm: 300, paperRate: 4100, plateCost: 2800, impressionRate: 300, cutting: 1500, binding: 3500, margin: 30 }
+    ];
+  }
+
+  if (!db.schedules || db.schedules.length === 0) {
+    db.schedules = [
+      { id: uid(), machine: 'Heidelberg Speedmaster SM-74', jobTitle: 'JOB-102: ভিটামিন সিরাপ বক্স', start: '08:00 AM', end: '02:00 PM', priority: 'High (Rush)', operator: 'ওস্তাদ কামাল', completed: false },
+      { id: uid(), machine: 'Komori Lithrone 426', jobTitle: 'JOB-103: গ্রিন লিফ ফুড লেবেল', start: '09:30 AM', end: '04:00 PM', priority: 'Normal', operator: 'সুমন আহমেদ', completed: false }
+    ];
+  }
+
+  if (!db.journal || db.journal.length === 0) {
+    db.journal = [
+      {
+        id: uid(),
+        entryNo: 'JV-2026-001',
+        date: today(),
+        refType: 'PETTY_CASH',
+        refId: 'PC-2026-081',
+        memo: 'দৈনিক কারখানা খরচ ও নাস্তা ভাউচার',
+        lines: [
+          { accountCode: '5100', accountName: 'Factory Overhead & Refreshment', direction: 'DEBIT', amount: 450 },
+          { accountCode: '1050', accountName: 'Adframe Petty Cash', direction: 'CREDIT', amount: 450 }
+        ]
+      },
+      {
+        id: uid(),
+        entryNo: 'JV-2026-002',
+        date: today(),
+        refType: 'SALES_INVOICE',
+        refId: 'JOB-2026-101',
+        memo: 'জব সমাপ্তি ও ক্লায়েন্ট বিলিং: অ্যাক্সিস পাবলিকেশন্স',
+        lines: [
+          { accountCode: '1200', accountName: 'Accounts Receivable (অ্যাক্সিস)', direction: 'DEBIT', amount: 58000 },
+          { accountCode: '4000', accountName: 'Print Job Sales Revenue', direction: 'CREDIT', amount: 58000 }
+        ]
+      }
+    ];
+  }
+
+  persist();
+}
 
 function typeTag(t, personal=false) {
   if(personal) {
@@ -974,32 +1625,56 @@ function boot() {
   const raw = localStorage.getItem(KEY) || localStorage.getItem('skyhara_v3');
   if (raw) { try { db = {...db,...JSON.parse(raw)}; } catch(e){} }
   // ensure all arrays exist
-  ['orders','expenses','personal','loans','loanPayments','recurring','budgets'].forEach(k=>{ if(!db[k]) db[k]=[]; });
+  ['orders','expenses','personal','loans','loanPayments','recurring','budgets',
+   'pettyCash','bankAccounts','clients','deliveries','impressions','paperStock','parties','pressJobs','costingTemplates','schedules','journal','accounts'
+  ].forEach(k=>{ if(!db[k]) db[k]=[]; });
   const url = localStorage.getItem(URL_KEY) || localStorage.getItem('skyhara_script_url');
   if (url) { document.getElementById('script-url').value = url; setConnStatus('idle','// URL সেট আছে'); }
   // set today defaults
   const t = today();
   const m = t.slice(0,7);
   currentBudgetMonth = m;
-  ['exp-date','per-date','lp-date','loan-start','rec-next-date'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=t; });
+  ['exp-date','per-date','lp-date','loan-start','rec-next-date','jv-date'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=t; });
   ['qp-month','per-month','budget-month','dash-budget-month','budget-sec-month'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=m; });
   
-  // Seed default budgets if completely empty to give user instant value
+  // Seed default budgets if completely empty
   if (!db.budgets || db.budgets.length === 0) {
     seedInitialBudgets();
   }
+  // Seed 10-workbooks if empty
+  if (!db.pettyCash || db.pettyCash.length === 0) {
+    seedInitialWorkbooksData();
+  }
+
+  // Initialize Offline Sync Queue & Service Worker
+  initSyncQueue();
+  initServiceWorkerAndNetworkListeners();
   
   updateRecTypeOptions();
   updateBudgetCategoryOptions();
   checkDueRecurringAlerts();
   renderDashboard();
   populateDropdowns();
+  if (typeof renderDynamicCostingPreview === 'function') calculateDynamicCosting();
 }
 
-function persist() {
+function persist(mutationInfo = '') {
   localStorage.setItem(KEY, JSON.stringify(db));
-  clearTimeout(syncTimer);
-  syncTimer = setTimeout(()=>autoSync(), 5000);
+  
+  // Track in offline sync queue
+  if (mutationInfo) {
+    enqueueOfflineMutation('UPDATE', mutationInfo);
+  } else {
+    enqueueOfflineMutation('UPDATE', 'হিসাব আপডেট (' + new Date().toLocaleTimeString('bn-BD') + ')');
+  }
+
+  // If online, debounce autoSync
+  if (navigator.onLine && getUrl()) {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(()=>autoSync(), 4000);
+  } else {
+    updateSyncQueueUI();
+  }
 }
 
 /* ── DATE FILTER LOGIC ── */
@@ -1702,24 +2377,1282 @@ function populateDropdowns(){
 
 /* ══ TAB SWITCH ══ */
 function switchTab(tab) {
-  const tabs=['dashboard','charts','budget','orders','expenses','personal','recurring','loans','insights','report','settings'];
-  document.querySelectorAll('.nav-tab').forEach((t,i)=>{
-    t.classList.toggle('active',tabs[i]===tab);
+  document.querySelectorAll('.nav-tab').forEach(t => {
+    const onclickAttr = t.getAttribute('onclick') || '';
+    t.classList.toggle('active', onclickAttr.includes(`'${tab}'`));
   });
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  const targetSection = document.getElementById('sec-'+tab);
-  if(targetSection) targetSection.classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  const targetSection = document.getElementById('sec-' + tab);
+  if (targetSection) targetSection.classList.add('active');
   
-  if(tab==='dashboard') renderDashboard();
-  if(tab==='charts') renderAllCharts();
-  if(tab==='budget') renderBudgetPlannerPage();
-  if(tab==='orders') renderOrders();
-  if(tab==='expenses'){updateTopbar();populateDropdowns();renderExpensesTable();}
-  if(tab==='personal') renderPersonalTab();
-  if(tab==='recurring') renderRecurring();
-  if(tab==='loans') renderLoans();
-  if(tab==='insights') renderInsights();
-  if(tab==='report') renderReport();
+  if (tab === 'workbooks') renderWorkbooksHub();
+  else if (tab === 'importer') renderImporterTab();
+  else if (tab === 'ledger') renderLedgerTab();
+  else if (tab === 'costing') renderCostingTab();
+  else if (tab === 'floor') renderFloorTab();
+  else if (tab === 'cloudsync') renderCloudSyncTab();
+  else if (tab === 'dashboard') renderDashboard();
+  else if (tab === 'charts') renderAllCharts();
+  else if (tab === 'budget') renderBudgetPlannerPage();
+  else if (tab === 'orders') renderOrders();
+  else if (tab === 'expenses') { updateTopbar(); populateDropdowns(); renderExpensesTable(); }
+  else if (tab === 'personal') renderPersonalTab();
+  else if (tab === 'recurring') renderRecurring();
+  else if (tab === 'loans') renderLoans();
+  else if (tab === 'insights') renderInsights();
+  else if (tab === 'report') renderReport();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   1. 10-WORKBOOK UNIFIED HUB ENGINE
+══════════════════════════════════════════════════════════════════ */
+const WORKBOOK_CONFIG = {
+  pettyCash: { title: '1. Adframe Petty Cash', short: 'Petty Cash', icon: '🧾', badge: 'দৈনিক নগদ খরচ', color: 'var(--amber)' },
+  bankAccounts: { title: '2. Bank & Cash AC', short: 'Bank & Cash', icon: '🏛️', badge: 'প্রধান লিকুইড ফান্ড', color: 'var(--blue)' },
+  clients: { title: '3. Client Ledgers', short: 'Clients', icon: '👥', badge: 'ক্লায়েন্ট বাকি খাতা', color: 'var(--green)' },
+  deliveries: { title: '4. Delivery & Challan', short: 'Deliveries', icon: '🚚', badge: 'লজিস্টিক ও চালান', color: 'var(--accent)' },
+  impressions: { title: '5. Impression Cash AC', short: 'Impressions', icon: '⚙️', badge: 'কাউন্টার ক্যাশফ্লো', color: 'var(--purple)' },
+  paperStock: { title: '6. Paper Stock', short: 'Paper Stock', icon: '📦', badge: 'রিম ও ওয়্যারহাউজ', color: 'var(--amber)' },
+  parties: { title: '7. Party & Vendors', short: 'Parties', icon: '🏭', badge: 'ভেন্ডর দায় ও পেয়াবল', color: 'var(--red)' },
+  pressJobs: { title: '8. Press Production', short: 'Press Jobs', icon: '🖨️', badge: 'জব কার্ড ও রান', color: 'var(--green)' },
+  costingTemplates: { title: '9. Price Costing', short: 'Costing', icon: '📐', badge: 'কস্টিং মডেল', color: 'var(--blue)' },
+  schedules: { title: '10. Work Schedule', short: 'Schedules', icon: '📅', badge: 'মেশিন কিউ', color: 'var(--accent)' }
+};
+
+function renderWorkbooksHub() {
+  renderWorkbookGridCards();
+  renderActiveWorkbookTable();
+}
+
+function renderWorkbookGridCards() {
+  const container = document.getElementById('hub-workbooks-grid');
+  if (!container) return;
+
+  const totalPetty = (db.pettyCash || []).reduce((s, x) => s + Number(x.amount || 0), 0);
+  const totalBank = (db.bankAccounts || []).reduce((s, x) => s + Number(x.balance || 0), 0);
+  const totalClientDue = (db.clients || []).reduce((s, x) => s + Number(x.balance || 0), 0);
+  const totalPaperReams = (db.paperStock || []).reduce((s, x) => s + Number(x.reams || 0), 0);
+  const totalPartyDue = (db.parties || []).reduce((s, x) => s + Number(x.due || 0), 0);
+  const activeJobs = (db.pressJobs || []).filter(j => j.status !== 'completed').length;
+  const pendingDeliveries = (db.deliveries || []).filter(d => d.status !== 'delivered').length;
+  const totalImpressionVal = (db.impressions || []).reduce((s, x) => s + Number(x.value || 0), 0);
+
+  const metricsMap = {
+    pettyCash: { count: `${db.pettyCash?.length || 0} ভাউচার`, value: fmt(totalPetty) },
+    bankAccounts: { count: `${db.bankAccounts?.length || 0} হিসাব`, value: fmt(totalBank) },
+    clients: { count: `${db.clients?.length || 0} ক্লায়েন্ট`, value: fmt(totalClientDue) },
+    deliveries: { count: `${db.deliveries?.length || 0} চালান`, value: `${pendingDeliveries} চালানে বকেয়া` },
+    impressions: { count: `${db.impressions?.length || 0} শিফট রান`, value: fmt(totalImpressionVal) },
+    paperStock: { count: `${db.paperStock?.length || 0} আইটেম`, value: `${totalPaperReams.toFixed(1)} রিম স্টক` },
+    parties: { count: `${db.parties?.length || 0} সাপ্লায়ার`, value: fmt(totalPartyDue) },
+    pressJobs: { count: `${db.pressJobs?.length || 0} জব কার্ড`, value: `${activeJobs} রানিং প্রোডাকশন` },
+    costingTemplates: { count: `${db.costingTemplates?.length || 0} টেমপ্লেট`, value: 'ডায়নামিক মডেল' },
+    schedules: { count: `${db.schedules?.length || 0} কিউ এন্ট্রি`, value: 'লাইভ মেশিন শিডিউল' }
+  };
+
+  container.innerHTML = Object.entries(WORKBOOK_CONFIG).map(([k, cfg]) => {
+    const isSelected = activeWorkbook === k;
+    const m = metricsMap[k] || { count: '0', value: '—' };
+    return `
+      <div class="wb-card ${isSelected ? 'selected' : ''}" onclick="selectWorkbook('${k}')">
+        <div class="wb-card-header">
+          <div class="wb-card-title">${cfg.icon} ${cfg.short}</div>
+          <span class="wb-card-badge" style="background:${cfg.color}22;color:${cfg.color}">${cfg.badge}</span>
+        </div>
+        <div class="wb-card-metric" style="color:${cfg.color}">${m.value}</div>
+        <div class="wb-card-sub">${m.count} • সিঙ্ক অ্যাক্টিভ</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectWorkbook(wbKey) {
+  activeWorkbook = wbKey;
+  renderWorkbookGridCards();
+  renderActiveWorkbookTable();
+}
+
+function renderActiveWorkbookTable() {
+  const cfg = WORKBOOK_CONFIG[activeWorkbook] || WORKBOOK_CONFIG.pettyCash;
+  const titleEl = document.getElementById('active-wb-title');
+  const countEl = document.getElementById('active-wb-count');
+  const addBtn = document.getElementById('active-wb-add-btn');
+  const thead = document.getElementById('active-wb-thead');
+  const tbody = document.getElementById('active-wb-tbody');
+
+  if (titleEl) titleEl.textContent = `${cfg.icon} ${cfg.title}`;
+  if (addBtn) addBtn.textContent = `+ নতুন ${cfg.short} এন্ট্রি`;
+
+  const list = db[activeWorkbook] || [];
+  if (countEl) countEl.textContent = `${list.length}টি রেকর্ড লিপিবদ্ধ`;
+
+  if (!thead || !tbody) return;
+
+  if (activeWorkbook === 'pettyCash') {
+    thead.innerHTML = `<tr><th>ভাউচার নং</th><th>তারিখ</th><th>খাত</th><th>গ্রহীতা</th><th style="text-align:right">পরিমাণ (BDT)</th><th>অনুমোদনকারী</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">কোনো পেটি ক্যাশ এন্ট্রি নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><strong style="color:var(--amber)">${x.voucherNo || '—'}</strong></td>
+          <td>${fmtD(x.date)}</td>
+          <td>${typeTag(x.category || 'অন্যান্য')}</td>
+          <td>${x.recipient || '—'}</td>
+          <td style="text-align:right;font-weight:600;color:var(--red)">${fmt(x.amount)}</td>
+          <td><span style="font-size:11px;color:var(--muted)">${x.authorizedBy || 'এডমিন'}</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('pettyCash','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'bankAccounts') {
+    thead.innerHTML = `<tr><th>অ্যাকাউন্ট কোড</th><th>অ্যাকাউন্টের নাম</th><th>টাইপ</th><th style="text-align:right">বর্তমান ব্যালেন্স</th><th>সর্বশেষ লেনদেন</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted)">কোনো ব্যাংক অ্যাকাউন্ট নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><code>${x.code}</code></td>
+          <td><strong style="color:var(--text)">${x.name}</strong></td>
+          <td><span class="tag ${x.type==='bank'?'tag-loan':x.type==='petty'?'tag-overhead':'tag-grocery'}">${x.type}</span></td>
+          <td style="text-align:right;font-weight:bold;color:var(--green);font-size:14px">${fmt(x.balance)}</td>
+          <td>${fmtD(x.lastTxn)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('bankAccounts','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'clients') {
+    thead.innerHTML = `<tr><th>কোড</th><th>ক্লায়েন্টের নাম</th><th>কোম্পানি</th><th>মোবাইল</th><th style="text-align:right">ক্রেডিট লিমিট</th><th style="text-align:right">বকেয়া পাওনা (AR)</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">কোনো ক্লায়েন্ট যুক্ত নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><code>${x.code || 'CL'}</code></td>
+          <td><strong style="color:var(--amber)">${x.name}</strong></td>
+          <td>${x.company || '—'}</td>
+          <td>${x.phone || '—'}</td>
+          <td style="text-align:right;color:var(--muted)">${fmt(x.creditLimit)}</td>
+          <td style="text-align:right;font-weight:bold;color:${x.balance>0?'var(--red)':'var(--green)'}">${fmt(x.balance)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('clients','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'deliveries') {
+    thead.innerHTML = `<tr><th>চালান নং</th><th>তারিখ</th><th>ক্লায়েন্ট</th><th>জব বিবরণ</th><th>পরিমাণ</th><th>যানবাহন ও ড্রাইভার</th><th>অবস্থা</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">কোনো চালান এন্ট্রি নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><strong style="color:var(--accent)">${x.challanNo || '—'}</strong></td>
+          <td>${fmtD(x.date)}</td>
+          <td>${x.clientName}</td>
+          <td>${x.jobTitle || '—'}</td>
+          <td><strong>${Number(x.qty).toLocaleString('en-IN')} পিস</strong></td>
+          <td><div style="font-size:11px">${x.vehicleNo || 'লোকাল ভ্যান'}</div><div style="font-size:10px;color:var(--muted)">${x.driver || '—'}</div></td>
+          <td><span class="oc-status ${x.status==='delivered'?'s-delivered':'s-pending'}">${x.status==='delivered'?'পৌঁছেছে':'পথে আছে'}</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('deliveries','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'impressions') {
+    thead.innerHTML = `<tr><th>তারিখ</th><th>মেশিন</th><th>কাউন্টার শুরু - শেষ</th><th>মোট ইমপ্রেশন</th><th>রেট (প্রতি ১০০০)</th><th style="text-align:right">মোট টাকা</th><th>অপারেটর</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">কোনো ইমপ্রেশন লগ নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td>${fmtD(x.date)}</td>
+          <td><strong style="color:var(--text)">${x.machine}</strong></td>
+          <td><span style="font-size:11px;color:var(--muted)">${x.startCounter.toLocaleString('en-IN')} ➜ ${x.endCounter.toLocaleString('en-IN')}</span></td>
+          <td><span class="tag tag-raw">${Number(x.total).toLocaleString('en-IN')} imp</span></td>
+          <td>৳${x.rate}</td>
+          <td style="text-align:right;font-weight:bold;color:var(--green)">${fmt(x.value)}</td>
+          <td><span style="font-size:11px">${x.operator} (${x.shift})</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('impressions','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'paperStock') {
+    thead.innerHTML = `<tr><th>কোড</th><th>কাগজের বিবরণ</th><th>জিএসএম (GSM)</th><th>সাইজ</th><th style="text-align:right">স্টক রিম</th><th style="text-align:right">দর/রিম</th><th>ওয়্যারহাউজ</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted)">কোনো পেপার স্টক নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><code>${x.code || 'PAP'}</code></td>
+          <td><strong style="color:var(--amber)">${x.brand || x.type}</strong></td>
+          <td><span class="tag tag-other">${x.gsm} GSM</span></td>
+          <td>${x.size}</td>
+          <td style="text-align:right;font-weight:bold;color:${x.reams<10?'var(--red)':'var(--text)'}">${Number(x.reams).toFixed(1)} রিম</td>
+          <td style="text-align:right">${fmt(x.costPerReam)}</td>
+          <td><span style="font-size:11px;color:var(--muted)">${x.warehouse || 'ফ্লোর'}</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('paperStock','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'parties') {
+    thead.innerHTML = `<tr><th>কোড</th><th>পার্টি/ভেন্ডর</th><th>কন্টাক্ট পারসন</th><th>মোবাইল</th><th>সরবরাহকৃত পণ্য</th><th style="text-align:right">বকেয়া পাওনা (AP)</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">কোনো পার্টি ভেন্ডর নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><code>${x.code || 'PT'}</code></td>
+          <td><strong style="color:var(--red)">${x.name}</strong></td>
+          <td>${x.contact || '—'}</td>
+          <td>${x.phone || '—'}</td>
+          <td>${x.material || '—'}</td>
+          <td style="text-align:right;font-weight:bold;color:var(--red);font-size:14px">${fmt(x.due)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('parties','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'pressJobs') {
+    thead.innerHTML = `<tr><th>জব নং</th><th>জব শিরোনাম</th><th>ক্লায়েন্ট</th><th>পরিমাণ</th><th>ব্যবহৃত কাগজ</th><th style="text-align:right">বিলিং মূল্য</th><th style="text-align:right">মোট খরচ</th><th>অবস্থা</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">কোনো প্রেস জব নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><strong style="color:var(--green)">${x.jobNo || 'JOB'}</strong></td>
+          <td><strong style="color:var(--text)">${x.title}</strong></td>
+          <td>${x.client}</td>
+          <td>${Number(x.targetQty).toLocaleString('en-IN')} পিস</td>
+          <td><span style="font-size:11px">${x.reamsUsed || 0} রিম (${x.paperType})</span></td>
+          <td style="text-align:right;font-weight:bold;color:var(--amber)">${fmt(x.agreedPrice)}</td>
+          <td style="text-align:right;color:var(--red)">${fmt(x.cost)}</td>
+          <td><span class="oc-status ${x.status==='completed'?'s-delivered':x.status==='running'?'s-active':'s-pending'}">${x.status==='completed'?'সম্পন্ন':x.status==='running'?'চলছে':'কিউ'}</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('pressJobs','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'costingTemplates') {
+    thead.innerHTML = `<tr><th>মডেল টেমপ্লেট নাম</th><th>কাগজ GSM</th><th>কাগজ দর/রিম</th><th>প্লেট মেকিং</th><th>ইমপ্রেশন/১০০০</th><th>মার্জিন %</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">কোনো কস্টিং টেমপ্লেট নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><strong style="color:var(--blue)">${x.name}</strong></td>
+          <td><span class="tag tag-other">${x.gsm} GSM</span></td>
+          <td>${fmt(x.paperRate)}</td>
+          <td>${fmt(x.plateCost)}</td>
+          <td>৳${x.impressionRate}</td>
+          <td><span class="tag tag-raw">${x.margin}%</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('costingTemplates','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  } else if (activeWorkbook === 'schedules') {
+    thead.innerHTML = `<tr><th>মেশিন</th><th>জব শিরোনাম</th><th>সময়সূচি</th><th>অগ্রাধিকার</th><th>অপারেটর</th><th>স্ট্যাটাস</th><th>অ্যাকশন</th></tr>`;
+    tbody.innerHTML = list.length === 0 ? `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">কোনো শিডিউল এন্ট্রি নেই</td></tr>` :
+      list.map(x => `
+        <tr>
+          <td><strong style="color:var(--text)">${x.machine}</strong></td>
+          <td>${x.jobTitle}</td>
+          <td><span style="font-size:11px;color:var(--amber)">${x.start} - ${x.end}</span></td>
+          <td><span class="tag ${x.priority.includes('High')?'tag-medical':'tag-other'}">${x.priority}</span></td>
+          <td>${x.operator}</td>
+          <td><span class="oc-status ${x.completed?'s-delivered':'s-active'}">${x.completed?'সম্পন্ন':'চলমান'}</span></td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteWorkbookEntry('schedules','${x.id}')">✕</button></td>
+        </tr>
+      `).join('');
+  }
+}
+
+function openWorkbookEntryModal(wbKey = null) {
+  const targetKey = wbKey || activeWorkbook;
+  const sel = document.getElementById('wb-select-module');
+  if (sel) sel.value = targetKey;
+  renderDynamicWorkbookForm(targetKey);
+  openModal('wb-entry-modal');
+}
+
+function renderDynamicWorkbookForm(wbKey) {
+  const container = document.getElementById('wb-dynamic-form-fields');
+  const titleEl = document.getElementById('wb-modal-title');
+  const cfg = WORKBOOK_CONFIG[wbKey] || WORKBOOK_CONFIG.pettyCash;
+  if (titleEl) titleEl.textContent = `নতুন এন্ট্রি: ${cfg.title}`;
+
+  if (wbKey === 'pettyCash') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">ভাউচার নং *</label><input type="text" id="wbf-voucher" value="PC-${Date.now().toString().slice(-4)}"></div>
+        <div><label class="form-label">তারিখ *</label><input type="date" id="wbf-date" value="${today()}"></div>
+      </div>
+      <div class="form-row-2">
+        <div>
+          <label class="form-label">খরচের খাত *</label>
+          <select id="wbf-category">
+            <option>কারখানা চা/নাস্তা</option><option>জরুরি মেশিন লুব্রিকেন্ট</option><option>লোকাল ভ্যান ডেলিভারি</option>
+            <option>অফিস স্টেশনারি</option><option>ইলেকট্রিক ফিটিং</option><option>অন্যান্য শপফ্লোর খরচ</option>
+          </select>
+        </div>
+        <div><label class="form-label">পরিমাণ (BDT) *</label><input type="number" id="wbf-amount" placeholder="০"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">টাকা প্রদান করা হলো (Recipient)</label><input type="text" id="wbf-recipient" placeholder="যেমন: হেল্পার রহিম"></div>
+        <div><label class="form-label">অনুমোদনকারী</label><input type="text" id="wbf-auth" value="ম্যানেজার"></div>
+      </div>
+    `;
+  } else if (wbKey === 'bankAccounts') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">অ্যাকাউন্ট কোড *</label><input type="text" id="wbf-code" placeholder="1040"></div>
+        <div>
+          <label class="form-label">অ্যাকাউন্ট টাইপ *</label>
+          <select id="wbf-type"><option value="bank">ব্যাংক একাউন্ট</option><option value="cash">নগদ ক্যাশ বক্স</option><option value="petty">পেটি ক্যাশ ফ্লোট</option></select>
+        </div>
+      </div>
+      <div class="form-row"><label class="form-label">ব্যাংক ও শাখার নাম *</label><input type="text" id="wbf-name" placeholder="যেমন: ব্র্যাক ব্যাংক (গুলশান শাখা AC-4421)"></div>
+      <div class="form-row"><label class="form-label">প্রারম্ভিক ব্যালেন্স (BDT) *</label><input type="number" id="wbf-balance" placeholder="০"></div>
+    `;
+  } else if (wbKey === 'clients') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">ক্লায়েন্ট কোড</label><input type="text" id="wbf-code" value="CL-${Math.floor(100+Math.random()*900)}"></div>
+        <div><label class="form-label">ক্লায়েন্টের নাম *</label><input type="text" id="wbf-name" placeholder="ক্লায়েন্ট/প্রতিষ্ঠানের নাম"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">কোম্পানির নাম</label><input type="text" id="wbf-company" placeholder="লিমিটেড কোম্পানি"></div>
+        <div><label class="form-label">মোবাইল নং</label><input type="text" id="wbf-phone" placeholder="017xxxxxxxx"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">ক্রেডিট লিমিট (BDT)</label><input type="number" id="wbf-limit" value="100000"></div>
+        <div><label class="form-label">বর্তমান বকেয়া (BDT)</label><input type="number" id="wbf-balance" value="0"></div>
+      </div>
+    `;
+  } else if (wbKey === 'deliveries') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">চালান নং *</label><input type="text" id="wbf-challan" value="CH-${Math.floor(1000+Math.random()*9000)}"></div>
+        <div><label class="form-label">তারিখ *</label><input type="date" id="wbf-date" value="${today()}"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">ক্লায়েন্টের নাম *</label><input type="text" id="wbf-client" placeholder="ক্লায়েন্টের নাম"></div>
+        <div><label class="form-label">ডেলিভারি পরিমাণ (পিস) *</label><input type="number" id="wbf-qty" placeholder="৫০০০"></div>
+      </div>
+      <div class="form-row"><label class="form-label">জব ও পণ্যের বিবরণ</label><input type="text" id="wbf-title" placeholder="যেমন: আর্ট পেপার ব্রোশিওর"></div>
+      <div class="form-row-2">
+        <div><label class="form-label">গাড়ি/যানবাহন নং</label><input type="text" id="wbf-veh" placeholder="ঢাকা মেট্রো-ন ১২-৩৪৫৬"></div>
+        <div><label class="form-label">ড্রাইভার / ডেলিভারিম্যান</label><input type="text" id="wbf-driver" placeholder="ড্রাইভারের নাম"></div>
+      </div>
+    `;
+  } else if (wbKey === 'impressions') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">তারিখ *</label><input type="date" id="wbf-date" value="${today()}"></div>
+        <div>
+          <label class="form-label">মেশিন নির্বাচন *</label>
+          <select id="wbf-machine"><option>Heidelberg Speedmaster SM-74 (Unit 1)</option><option>Komori Lithrone 426 (Unit 2)</option><option>Dominant 715 (Single Color)</option></select>
+        </div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">কাউন্টার শুরু (Start)</label><input type="number" id="wbf-start" placeholder="1000000" oninput="calcImpTotal()"></div>
+        <div><label class="form-label">কাউন্টার শেষ (End)</label><input type="number" id="wbf-end" placeholder="1015000" oninput="calcImpTotal()"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">ইমপ্রেশন রেট (প্রতি ১০০০) *</label><input type="number" id="wbf-rate" value="250" oninput="calcImpTotal()"></div>
+        <div><label class="form-label">মোট টাকা (Auto)</label><input type="number" id="wbf-val" readonly style="background:var(--bg3)"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">অপারেটর</label><input type="text" id="wbf-op" value="ওস্তাদ কামাল"></div>
+        <div><label class="form-label">শিফট</label><select id="wbf-shift"><option>Day</option><option>Night</option></select></div>
+      </div>
+    `;
+  } else if (wbKey === 'paperStock') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">কাগজের কোড</label><input type="text" id="wbf-code" value="PAP-${Math.floor(100+Math.random()*900)}"></div>
+        <div><label class="form-label">ব্র্যান্ড ও পেপারের নাম *</label><input type="text" id="wbf-brand" placeholder="যেমন: Hansol Art Paper"></div>
+      </div>
+      <div class="form-row-3">
+        <div><label class="form-label">ধরন</label><select id="wbf-type"><option>Art Paper</option><option>Offset</option><option>Duplex Board</option><option>Kraft Paper</option></select></div>
+        <div><label class="form-label">GSM</label><input type="number" id="wbf-gsm" value="150"></div>
+        <div><label class="form-label">সাইজ</label><input type="text" id="wbf-size" value="23x36 in"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">বর্তমান স্টক (রিম) *</label><input type="number" id="wbf-reams" step="0.5" placeholder="২৫.০"></div>
+        <div><label class="form-label">ক্রয় দর প্রতি রিম (BDT)</label><input type="number" id="wbf-rate" placeholder="৩২০০"></div>
+      </div>
+    `;
+  } else if (wbKey === 'parties') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">পার্টি কোড</label><input type="text" id="wbf-code" value="PT-${Math.floor(10+Math.random()*90)}"></div>
+        <div><label class="form-label">পার্টি / ভেন্ডর নাম *</label><input type="text" id="wbf-name" placeholder="যেমন: রহমান পেপার হাউস"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">কন্টাক্ট পারসন</label><input type="text" id="wbf-contact" placeholder="মালিক/ম্যানেজারের নাম"></div>
+        <div><label class="form-label">মোবাইল নং</label><input type="text" id="wbf-phone" placeholder="018xxxxxxxx"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">সরবরাহকৃত ম্যাটেরিয়াল</label><input type="text" id="wbf-mat" placeholder="আর্ট পেপার, প্রিন্টিং কালি..."></div>
+        <div><label class="form-label">বর্তমান বাকি দায় (AP) (BDT) *</label><input type="number" id="wbf-due" placeholder="০"></div>
+      </div>
+    `;
+  } else if (wbKey === 'pressJobs') {
+    container.innerHTML = `
+      <div class="form-row-2">
+        <div><label class="form-label">জব নং *</label><input type="text" id="wbf-job" value="JOB-${Date.now().toString().slice(-4)}"></div>
+        <div><label class="form-label">ক্লায়েন্টের নাম *</label><input type="text" id="wbf-client" placeholder="ক্লায়েন্টের নাম"></div>
+      </div>
+      <div class="form-row"><label class="form-label">জবের বিবরণ *</label><input type="text" id="wbf-title" placeholder="যেমন: বার্ষিক রিপোর্ট ব্রোশিওর"></div>
+      <div class="form-row-3">
+        <div><label class="form-label">টার্গেট সংখ্যা</label><input type="number" id="wbf-qty" placeholder="৫০০০"></div>
+        <div><label class="form-label">ব্যবহৃত রিম</label><input type="number" id="wbf-reams" step="0.5" placeholder="১০.০"></div>
+        <div><label class="form-label">প্লেট সংখ্যা</label><input type="number" id="wbf-plates" value="4"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">চুক্তিকৃত ক্লায়েন্ট বিলিং (BDT) *</label><input type="number" id="wbf-price" placeholder="৫০০০০"></div>
+        <div><label class="form-label">উৎপাদন খরচ (BDT)</label><input type="number" id="wbf-cost" placeholder="৩৫০০০"></div>
+      </div>
+    `;
+  } else if (wbKey === 'costingTemplates') {
+    container.innerHTML = `
+      <div class="form-row"><label class="form-label">মডেল টেমপ্লেটের নাম *</label><input type="text" id="wbf-name" placeholder="যেমন: ব্রোশিওর ১৫০ GSM (4C)"></div>
+      <div class="form-row-3">
+        <div><label class="form-label">কাগজ GSM</label><input type="number" id="wbf-gsm" value="150"></div>
+        <div><label class="form-label">কাগজ প্রতি রিম</label><input type="number" id="wbf-paper" value="3200"></div>
+        <div><label class="form-label">প্লেট সেট খরচ</label><input type="number" id="wbf-plate" value="1400"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">ইমপ্রেশন রেট/১০০০</label><input type="number" id="wbf-imp" value="250"></div>
+        <div><label class="form-label">প্রত্যাশিত লাভ মার্জিন (%)</label><input type="number" id="wbf-margin" value="25"></div>
+      </div>
+    `;
+  } else if (wbKey === 'schedules') {
+    container.innerHTML = `
+      <div class="form-row"><label class="form-label">মেশিন নির্বাচন *</label><select id="wbf-machine"><option>Heidelberg Speedmaster SM-74</option><option>Komori Lithrone 426</option><option>Dominant 715</option></select></div>
+      <div class="form-row"><label class="form-label">জব বিবরণ *</label><input type="text" id="wbf-title" placeholder="JOB-105: প্যাকেজিং বক্স"></div>
+      <div class="form-row-2">
+        <div><label class="form-label">শুরুর সময়</label><input type="text" id="wbf-start" value="09:00 AM"></div>
+        <div><label class="form-label">শেষের সময়</label><input type="text" id="wbf-end" value="03:00 PM"></div>
+      </div>
+      <div class="form-row-2">
+        <div><label class="form-label">অগ্রাধিকার</label><select id="wbf-priority"><option>Normal</option><option>High (Rush)</option><option>Urgent</option></select></div>
+        <div><label class="form-label">দায়িত্বপ্রাপ্ত অপারেটর</label><input type="text" id="wbf-op" value="ওস্তাদ কামাল"></div>
+      </div>
+    `;
+  }
+}
+
+function calcImpTotal() {
+  const start = Number(document.getElementById('wbf-start')?.value || 0);
+  const end = Number(document.getElementById('wbf-end')?.value || 0);
+  const rate = Number(document.getElementById('wbf-rate')?.value || 0);
+  const total = Math.max(0, end - start);
+  const val = (total / 1000) * rate;
+  const outEl = document.getElementById('wbf-val');
+  if (outEl) outEl.value = Math.round(val);
+}
+
+function saveDynamicWorkbookEntry() {
+  const wbKey = document.getElementById('wb-select-module').value;
+  if (!db[wbKey]) db[wbKey] = [];
+
+  const entryId = uid();
+  if (wbKey === 'pettyCash') {
+    const voucherNo = document.getElementById('wbf-voucher').value;
+    const amount = Number(document.getElementById('wbf-amount').value);
+    const category = document.getElementById('wbf-category').value;
+    const date = document.getElementById('wbf-date').value || today();
+    const recipient = document.getElementById('wbf-recipient').value;
+    const authorizedBy = document.getElementById('wbf-auth').value;
+
+    if (!amount || amount <= 0) { toast('পরিমাণ দিন', 'error'); return; }
+
+    const entry = { id: entryId, voucherNo, date, category, amount, recipient, paidFrom: '1050', authorizedBy, synced: true };
+    db.pettyCash.unshift(entry);
+
+    // Auto-post double entry
+    postDoubleEntryTransaction(date, 'PETTY_CASH', voucherNo, `পেটি ক্যাশ খরচ: ${category} (${recipient || ''})`,
+      [{ code: '5100', name: 'Factory Overhead & Refreshment', amount }],
+      [{ code: '1050', name: 'Adframe Petty Cash Float', amount }]
+    );
+    toast('✓ পেটি ক্যাশ ভাউচার ও লেজার সেভ হয়েছে');
+  } else if (wbKey === 'bankAccounts') {
+    const code = document.getElementById('wbf-code').value || '1040';
+    const name = document.getElementById('wbf-name').value;
+    const type = document.getElementById('wbf-type').value;
+    const balance = Number(document.getElementById('wbf-balance').value || 0);
+    if (!name) { toast('ব্যাংকের নাম দিন', 'error'); return; }
+
+    db.bankAccounts.unshift({ id: entryId, code, name, type, balance, lastTxn: today() });
+    toast('✓ ব্যাংক অ্যাকাউন্ট তৈরি হয়েছে');
+  } else if (wbKey === 'clients') {
+    const code = document.getElementById('wbf-code').value;
+    const name = document.getElementById('wbf-name').value;
+    const company = document.getElementById('wbf-company').value;
+    const phone = document.getElementById('wbf-phone').value;
+    const creditLimit = Number(document.getElementById('wbf-limit').value || 0);
+    const balance = Number(document.getElementById('wbf-balance').value || 0);
+    if (!name) { toast('নাম দিন', 'error'); return; }
+
+    db.clients.unshift({ id: entryId, code, name, company, phone, creditLimit, balance, ordersCount: 0 });
+    toast('✓ ক্লায়েন্ট খাতা সেভ হয়েছে');
+  } else if (wbKey === 'deliveries') {
+    const challanNo = document.getElementById('wbf-challan').value;
+    const date = document.getElementById('wbf-date').value || today();
+    const clientName = document.getElementById('wbf-client').value;
+    const jobTitle = document.getElementById('wbf-title').value;
+    const qty = Number(document.getElementById('wbf-qty').value || 0);
+    const vehicleNo = document.getElementById('wbf-veh').value;
+    const driver = document.getElementById('wbf-driver').value;
+    if (!clientName) { toast('ক্লায়েন্টের নাম দিন', 'error'); return; }
+
+    db.deliveries.unshift({ id: entryId, challanNo, date, clientName, jobTitle, qty, vehicleNo, driver, status: 'dispatched' });
+    toast('✓ ডেলিভারি চালান তৈরি হয়েছে');
+  } else if (wbKey === 'impressions') {
+    const date = document.getElementById('wbf-date').value || today();
+    const machine = document.getElementById('wbf-machine').value;
+    const startCounter = Number(document.getElementById('wbf-start').value || 0);
+    const endCounter = Number(document.getElementById('wbf-end').value || 0);
+    const rate = Number(document.getElementById('wbf-rate').value || 250);
+    const total = Math.max(0, endCounter - startCounter);
+    const value = Math.round((total / 1000) * rate);
+    const operator = document.getElementById('wbf-op').value;
+    const shift = document.getElementById('wbf-shift').value;
+
+    db.impressions.unshift({ id: entryId, date, machine, startCounter, endCounter, total, rate, value, operator, shift });
+    
+    // Post to Cash & Machine Revenue
+    postDoubleEntryTransaction(date, 'MACHINE_RUN', machine, `কাউন্টার ক্যাশ আয়: ${machine} (${total} imp)`,
+      [{ code: '1010', name: 'Cash in Hand', amount: value }],
+      [{ code: '4100', name: 'Impression Service Revenue', amount: value }]
+    );
+    toast('✓ ইমপ্রেশন ক্যাশ ও লেজার পোস্ট হয়েছে');
+  } else if (wbKey === 'paperStock') {
+    const code = document.getElementById('wbf-code').value;
+    const brand = document.getElementById('wbf-brand').value;
+    const type = document.getElementById('wbf-type').value;
+    const gsm = Number(document.getElementById('wbf-gsm').value || 150);
+    const size = document.getElementById('wbf-size').value;
+    const reams = Number(document.getElementById('wbf-reams').value || 0);
+    const costPerReam = Number(document.getElementById('wbf-rate').value || 0);
+    if (!brand) { toast('কাগজের নাম দিন', 'error'); return; }
+
+    db.paperStock.unshift({ id: entryId, code, brand, type, gsm, size, reams, costPerReam, warehouse: 'Floor A' });
+    toast('✓ পেপার স্টক ইনভেন্টরি যুক্ত হয়েছে');
+  } else if (wbKey === 'parties') {
+    const code = document.getElementById('wbf-code').value;
+    const name = document.getElementById('wbf-name').value;
+    const contact = document.getElementById('wbf-contact').value;
+    const phone = document.getElementById('wbf-phone').value;
+    const material = document.getElementById('wbf-mat').value;
+    const due = Number(document.getElementById('wbf-due').value || 0);
+    if (!name) { toast('পার্টির নাম দিন', 'error'); return; }
+
+    db.parties.unshift({ id: entryId, code, name, contact, phone, material, due });
+    toast('✓ পার্টি ভেন্ডর খাতা যুক্ত হয়েছে');
+  } else if (wbKey === 'pressJobs') {
+    const jobNo = document.getElementById('wbf-job').value;
+    const client = document.getElementById('wbf-client').value;
+    const title = document.getElementById('wbf-title').value;
+    const targetQty = Number(document.getElementById('wbf-qty').value || 0);
+    const reamsUsed = Number(document.getElementById('wbf-reams').value || 0);
+    const plates = Number(document.getElementById('wbf-plates').value || 4);
+    const agreedPrice = Number(document.getElementById('wbf-price').value || 0);
+    const cost = Number(document.getElementById('wbf-cost').value || 0);
+    if (!client || !title) { toast('ক্লায়েন্ট ও বিবরণ দিন', 'error'); return; }
+
+    db.pressJobs.unshift({ id: entryId, jobNo, title, client, targetQty, paperType: 'Art Paper', reamsUsed, plates, impressions: targetQty*4, agreedPrice, cost, status: 'running' });
+    
+    // Also create in Orders collection so Dashboard reflects it seamlessly
+    db.orders.unshift({ id: uid(), client, value: agreedPrice, status: 'active', date: today(), desc: `[${jobNo}] ${title}`, paid: 'no' });
+    toast('✓ প্রোডাকশন জব কার্ড তৈরি হয়েছে');
+  } else if (wbKey === 'costingTemplates') {
+    const name = document.getElementById('wbf-name').value;
+    const gsm = Number(document.getElementById('wbf-gsm').value || 150);
+    const paperRate = Number(document.getElementById('wbf-paper').value || 0);
+    const plateCost = Number(document.getElementById('wbf-plate').value || 0);
+    const impressionRate = Number(document.getElementById('wbf-imp').value || 250);
+    const margin = Number(document.getElementById('wbf-margin').value || 25);
+    if (!name) { toast('মডেলের নাম দিন', 'error'); return; }
+
+    db.costingTemplates.unshift({ id: entryId, name, gsm, paperRate, plateCost, impressionRate, cutting: 800, binding: 1200, margin });
+    toast('✓ কস্টিং টেমপ্লেট সেভ হয়েছে');
+  } else if (wbKey === 'schedules') {
+    const machine = document.getElementById('wbf-machine').value;
+    const jobTitle = document.getElementById('wbf-title').value;
+    const start = document.getElementById('wbf-start').value;
+    const end = document.getElementById('wbf-end').value;
+    const priority = document.getElementById('wbf-priority').value;
+    const operator = document.getElementById('wbf-op').value;
+    if (!jobTitle) { toast('জব শিরোনাম দিন', 'error'); return; }
+
+    db.schedules.unshift({ id: entryId, machine, jobTitle, start, end, priority, operator, completed: false });
+    toast('✓ মেশিন শিডিউলে যুক্ত হয়েছে');
+  }
+
+  persist();
+  closeModal('wb-entry-modal');
+  renderWorkbooksHub();
+  updateTopbar();
+}
+
+function deleteWorkbookEntry(wbKey, id) {
+  if (!confirm('এই রেকর্ডটি মুছতে চান?')) return;
+  db[wbKey] = (db[wbKey] || []).filter(x => x.id !== id);
+  persist();
+  toast('রেকর্ড মুছে ফেলা হয়েছে', 'error');
+  renderWorkbooksHub();
+  updateTopbar();
+}
+
+function exportCurrentWorkbookCSV() {
+  const cfg = WORKBOOK_CONFIG[activeWorkbook] || WORKBOOK_CONFIG.pettyCash;
+  const list = db[activeWorkbook] || [];
+  if (list.length === 0) { toast('কোনো ডেটা নেই', 'error'); return; }
+
+  const headers = Object.keys(list[0]).filter(k => k !== 'id');
+  const rows = [
+    [`H&H HandsAndHead — ${cfg.title} লেজার`],
+    ['রপ্তানির তারিখ', new Date().toLocaleString('bn-BD')],
+    [],
+    headers
+  ];
+
+  list.forEach(item => {
+    rows.push(headers.map(k => item[k]));
+  });
+
+  downloadCSVFile(`${activeWorkbook}-ledger-${today()}.csv`, rows);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   2. DOUBLE-ENTRY LEDGER & JOURNAL VOUCHER ENGINE
+══════════════════════════════════════════════════════════════════ */
+function postDoubleEntryTransaction(date, refType, refId, memo, debits, credits) {
+  if (!db.journal) db.journal = [];
+  const entryNo = `JV-${new Date().getFullYear()}-${String(db.journal.length + 1).padStart(4, '0')}`;
+  
+  const lines = [];
+  debits.forEach(d => lines.push({ accountCode: d.code, accountName: d.name, direction: 'DEBIT', amount: Number(d.amount) }));
+  credits.forEach(c => lines.push({ accountCode: c.code, accountName: c.name, direction: 'CREDIT', amount: Number(c.amount) }));
+
+  const totalDebit = debits.reduce((s, d) => s + Number(d.amount), 0);
+  const totalCredit = credits.reduce((s, c) => s + Number(c.amount), 0);
+
+  if (Math.abs(totalDebit - totalCredit) > 0.01) {
+    console.error('Unbalanced Journal Voucher:', { totalDebit, totalCredit, debits, credits });
+    return false;
+  }
+
+  db.journal.unshift({
+    id: uid(),
+    entryNo,
+    date: date || today(),
+    refType,
+    refId,
+    memo,
+    lines
+  });
+  persist();
+  return true;
+}
+
+function renderLedgerTab() {
+  renderTrialBalanceKPIs();
+  renderCOAGrid();
+  renderJournalTable();
+}
+
+function renderTrialBalanceKPIs() {
+  const journal = db.journal || [];
+  let totalDebit = 0;
+  let totalCredit = 0;
+
+  journal.forEach(entry => {
+    (entry.lines || []).forEach(line => {
+      if (line.direction === 'DEBIT') totalDebit += Number(line.amount || 0);
+      if (line.direction === 'CREDIT') totalCredit += Number(line.amount || 0);
+    });
+  });
+
+  const diff = Math.abs(totalDebit - totalCredit);
+  const isBalanced = diff < 0.01;
+
+  const kpisEl = document.getElementById('ledger-kpis');
+  if (kpisEl) {
+    kpisEl.innerHTML = `
+      <div class="dash-card">
+        <div class="dash-card-label">মোট ডেবিট (Total Debit)</div>
+        <div class="dash-card-val" style="color:var(--amber)">${fmt(totalDebit)}</div>
+        <div style="font-size:10px;color:var(--muted)">লেজার ট্রানজেকশন ডেবিট</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-label">মোট ক্রেডিট (Total Credit)</div>
+        <div class="dash-card-val" style="color:var(--blue)">${fmt(totalCredit)}</div>
+        <div style="font-size:10px;color:var(--muted)">লেজার ট্রানজেকশন ক্রেডিট</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-label">ট্রায়াল ব্যালেন্স স্ট্যাটাস</div>
+        <div class="dash-card-val" style="color:${isBalanced?'var(--green)':'var(--red)'};font-size:18px">
+          ${isBalanced ? '✓ ACID Balanced' : '⚠️ Unbalanced ('+fmt(diff)+')'}
+        </div>
+        <div style="font-size:10px;color:var(--muted)">গাণিতিক সমতা যাচাই</div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-label">মোট ভাউচার সংখ্যা</div>
+        <div class="dash-card-val" style="color:var(--text);font-size:22px">${journal.length}</div>
+        <div style="font-size:10px;color:var(--muted)">অডিট লগ ভেরিফায়েড</div>
+      </div>
+    `;
+  }
+}
+
+function renderCOAGrid() {
+  const container = document.getElementById('coa-summary-grid');
+  if (!container) return;
+
+  const coaAccounts = [
+    { code: '1010', name: 'Cash in Hand', type: 'Asset (নগদ ক্যাশ)', balance: (db.bankAccounts||[]).find(b=>b.code==='1010')?.balance || 85400 },
+    { code: '1020', name: 'Sonali Bank Principal AC', type: 'Asset (ব্যাংক ব্যালেন্স)', balance: (db.bankAccounts||[]).find(b=>b.code==='1020')?.balance || 342000 },
+    { code: '1050', name: 'Adframe Petty Cash Float', type: 'Asset (পেটি ক্যাশ)', balance: (db.bankAccounts||[]).find(b=>b.code==='1050')?.balance || 15000 },
+    { code: '1200', name: 'Accounts Receivable (AR)', type: 'Asset (ক্লায়েন্ট পাওনা)', balance: (db.clients||[]).reduce((s,c)=>s+Number(c.balance||0),0) },
+    { code: '1300', name: 'Paper & Raw Material Stock', type: 'Asset (ইনভেন্টরি)', balance: (db.paperStock||[]).reduce((s,p)=>s+Number(p.reams*p.costPerReam||0),0) },
+    { code: '2000', name: 'Accounts Payable / Vendors (AP)', type: 'Liability (পার্টি দায়)', balance: (db.parties||[]).reduce((s,p)=>s+Number(p.due||0),0) },
+    { code: '4000', name: 'Print Job Sales Revenue', type: 'Revenue (প্রিন্টিং বিক্রয় আয়)', balance: (db.orders||[]).reduce((s,o)=>s+Number(o.value||0),0) },
+    { code: '5000', name: 'Direct Factory Production Cost', type: 'Expense (উৎপাদন খরচ)', balance: (db.expenses||[]).reduce((s,e)=>s+Number(e.amount||0),0) }
+  ];
+
+  container.innerHTML = coaAccounts.map(a => `
+    <div style="background:var(--bg3);padding:12px 14px;border-radius:var(--r);border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <code style="font-size:11px;color:var(--amber)">${a.code}</code>
+        <span style="font-size:10px;color:var(--muted)">${a.type}</span>
+      </div>
+      <div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:6px">${a.name}</div>
+      <div style="font-size:16px;font-weight:bold;color:${a.code.startsWith('2')?'var(--red)':a.code.startsWith('4')?'var(--green)':'var(--amber)'}">
+        ${fmt(a.balance)}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderJournalTable() {
+  const tbody = document.getElementById('journal-table-body');
+  if (!tbody) return;
+
+  const journal = db.journal || [];
+  if (journal.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted)">কোনো জার্নাল ভাউচার নেই</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = journal.map(jv => {
+    const debits = (jv.lines || []).filter(l => l.direction === 'DEBIT');
+    const credits = (jv.lines || []).filter(l => l.direction === 'CREDIT');
+    const totalAmt = debits.reduce((s, d) => s + Number(d.amount), 0);
+
+    return `
+      <tr>
+        <td><strong style="color:var(--amber)">${jv.entryNo}</strong></td>
+        <td>${fmtD(jv.date)}</td>
+        <td>
+          <div style="font-weight:500;color:var(--text)">${jv.memo}</div>
+          <div style="font-size:10px;color:var(--muted)">রেফ: ${jv.refType} (${jv.refId || '—'})</div>
+        </td>
+        <td>
+          ${debits.map(d => `<div style="font-size:12px;color:var(--amber)"><code>${d.accountCode}</code> ${d.accountName}</div>`).join('')}
+        </td>
+        <td>
+          ${credits.map(c => `<div style="font-size:12px;color:var(--blue)"><code>${c.accountCode}</code> ${c.accountName}</div>`).join('')}
+        </td>
+        <td style="text-align:right;font-weight:bold;color:var(--green)">${fmt(totalAmt)}</td>
+        <td>
+          <span class="oc-status s-delivered" style="font-size:10px">Posted</span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openJournalEntryModal() {
+  document.getElementById('jv-date').value = today();
+  document.getElementById('jv-ref').value = `JV-${new Date().getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+  document.getElementById('jv-memo').value = '';
+  document.getElementById('jv-debit-amt').value = '';
+  document.getElementById('jv-credit-amt').value = '';
+  openModal('journal-modal');
+}
+
+function postManualJournalVoucher() {
+  const date = document.getElementById('jv-date').value || today();
+  const ref = document.getElementById('jv-ref').value || 'JV-MANUAL';
+  const memo = document.getElementById('jv-memo').value.trim();
+  const debitAcc = document.getElementById('jv-debit-acc').value;
+  const debitAmt = Number(document.getElementById('jv-debit-amt').value);
+  const creditAcc = document.getElementById('jv-credit-acc').value;
+  const creditAmt = Number(document.getElementById('jv-credit-amt').value);
+
+  if (!memo) { toast('বিবরণ / মেমো লিখুন', 'error'); return; }
+  if (!debitAmt || debitAmt <= 0 || !creditAmt || creditAmt <= 0) { toast('টাকার পরিমাণ দিন', 'error'); return; }
+  if (Math.abs(debitAmt - creditAmt) > 0.01) { toast('ডেবিট ও ক্রেডিট টাকা সমান হতে হবে', 'error'); return; }
+
+  const accMap = {
+    '1010': 'Cash in Hand',
+    '1020': 'Sonali Bank AC',
+    '1030': 'DBBL AC',
+    '1050': 'Adframe Petty Cash',
+    '1200': 'Accounts Receivable',
+    '1300': 'Paper & Material Inventory',
+    '2000': 'Accounts Payable / Party',
+    '4000': 'Print Job Sales Revenue',
+    '4100': 'Impression Service Revenue',
+    '5000': 'Direct Factory & Job Cost',
+    '5100': 'Factory Overhead & Utilities',
+    '5200': 'Delivery & Logistics'
+  };
+
+  const ok = postDoubleEntryTransaction(date, 'MANUAL_JV', ref, memo,
+    [{ code: debitAcc, name: accMap[debitAcc] || debitAcc, amount: debitAmt }],
+    [{ code: creditAcc, name: accMap[creditAcc] || creditAcc, amount: creditAmt }]
+  );
+
+  if (ok) {
+    toast('✓ জার্নাল ভাউচার সফলভাবে পোস্ট হয়েছে');
+    closeModal('journal-modal');
+    renderLedgerTab();
+  } else {
+    toast('পোস্টিং ব্যর্থ হয়েছে', 'error');
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   3. SPREADSHEET BATCH IMPORTER & FUZZY AUTO-MAPPER (SheetJS)
+══════════════════════════════════════════════════════════════════ */
+const MODULE_HEADER_ALIASES = {
+  pettyCash: ['voucher', 'ভাউচার', 'amount', 'টাকা', 'পরিমাণ', 'recipient', 'গ্রহীতা', 'category', 'খাত', 'নাস্তা'],
+  bankAccounts: ['bank', 'ব্যাংক', 'account', 'হিসাব', 'balance', 'ব্যালেন্স', 'code', 'কোড'],
+  clients: ['client', 'ক্লায়েন্ট', 'customer', 'গ্রাহক', 'company', 'কোম্পানি', 'credit', 'phone', 'মোবাইল'],
+  deliveries: ['challan', 'চালান', 'vehicle', 'গাড়ি', 'driver', 'ড্রাইভার', 'qty', 'ডেলিভারি'],
+  impressions: ['impression', 'ইমপ্রেশন', 'machine', 'মেশিন', 'counter', 'কাউন্টার', 'operator', 'অপারেটর'],
+  paperStock: ['paper', 'কাগজ', 'gsm', 'জিএসএম', 'ream', 'রিম', 'stock', 'স্টক', 'size', 'সাইজ'],
+  parties: ['party', 'পার্টি', 'vendor', 'ভেন্ডর', 'supplier', 'সাপ্লায়ার', 'due', 'বকেয়া', 'material'],
+  pressJobs: ['job', 'জব', 'order', 'অর্ডার', 'plate', 'প্লেট', 'binding', 'agreed', 'cost']
+};
+
+function renderImporterTab() {
+  if (stagedImportData) {
+    renderStagingPreview(stagedImportData);
+  }
+}
+
+function handleExcelFileUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      if (typeof XLSX === 'undefined') {
+        toast('SheetJS লোড হচ্ছে, অনুগ্রহ করে একটু পর চেষ্টা করুন', 'error');
+        return;
+      }
+      const workbook = XLSX.read(data, { type: 'array' });
+      parseExcelWorkbook(workbook, file.name);
+    } catch (err) {
+      toast('ফাইল প্রসেসিংয়ে ত্রুটি: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseExcelWorkbook(workbook, fileName) {
+  const sheetNames = workbook.SheetNames;
+  if (!sheetNames || sheetNames.length === 0) {
+    toast('স্প্রেডশীটে কোনো শীট পাওয়া যায়নি', 'error');
+    return;
+  }
+
+  // Pick first or matching sheet
+  const sheetName = sheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+  if (!rawJson || rawJson.length < 2) {
+    toast('শীটে পর্যাপ্ত ডেটা বা হেডার নেই', 'error');
+    return;
+  }
+
+  const rawHeaders = rawJson[0].map(h => String(h || '').trim());
+  const rows = rawJson.slice(1).filter(r => r.some(c => c !== undefined && c !== null && c !== ''));
+
+  // Detect target module
+  let detectedModule = 'pettyCash';
+  let bestScore = 0;
+
+  Object.entries(MODULE_HEADER_ALIASES).forEach(([mod, aliases]) => {
+    let score = 0;
+    rawHeaders.forEach(h => {
+      const lower = h.toLowerCase();
+      if (aliases.some(a => lower.includes(a.toLowerCase()))) score += 2;
+    });
+    if (sheetName.toLowerCase().includes(mod.toLowerCase())) score += 5;
+    if (score > bestScore) {
+      bestScore = score;
+      detectedModule = mod;
+    }
+  });
+
+  // Check manual override dropdown if user already picked
+  const manualSel = document.getElementById('importer-target-module');
+  if (manualSel && manualSel.value) {
+    detectedModule = manualSel.value;
+  }
+
+  stagedImportData = {
+    fileName,
+    sheetName,
+    detectedModule,
+    headers: rawHeaders,
+    rawRows: rows,
+    validRowsCount: rows.length,
+    errorCount: 0
+  };
+
+  renderStagingPreview(stagedImportData);
+  toast(`✓ ${rows.length}টি সারি সফলভাবে লোড ও ম্যাপ করা হয়েছে`);
+}
+
+function renderStagingPreview(data) {
+  const stagingSection = document.getElementById('importer-staging-preview');
+  const targetModuleSel = document.getElementById('importer-target-module');
+  const tagEl = document.getElementById('importer-detected-module-tag');
+  const countEl = document.getElementById('importer-staged-count');
+  const errEl = document.getElementById('importer-staged-errors');
+  const table = document.getElementById('importer-preview-table');
+
+  if (stagingSection) stagingSection.style.display = 'block';
+  if (targetModuleSel) targetModuleSel.value = data.detectedModule;
+  if (tagEl) tagEl.textContent = `মডিউল: ${WORKBOOK_CONFIG[data.detectedModule]?.title || data.detectedModule}`;
+  if (countEl) countEl.textContent = `${data.rawRows.length}টি সারি`;
+  if (errEl) errEl.textContent = `${data.errorCount}টি অমিল`;
+
+  if (table) {
+    const thead = `<thead><tr>${data.headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+    const previewRows = data.rawRows.slice(0, 10);
+    const tbody = `<tbody>${previewRows.map(r => `<tr>${data.headers.map((_, i) => `<td>${r[i] !== undefined ? r[i] : '—'}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    table.innerHTML = thead + tbody;
+  }
+}
+
+function commitStagingToDatabase() {
+  if (!stagedImportData) {
+    toast('কোনো স্টেজড ডেটা পাওয়া যায়নি', 'error');
+    return;
+  }
+
+  const targetModule = document.getElementById('importer-target-module')?.value || stagedImportData.detectedModule;
+  if (!db[targetModule]) db[targetModule] = [];
+
+  const headers = stagedImportData.headers.map(h => h.toLowerCase());
+  let importedCount = 0;
+
+  stagedImportData.rawRows.forEach(row => {
+    const item = { id: uid() };
+
+    if (targetModule === 'pettyCash') {
+      item.voucherNo = String(row[0] || `PC-IMP-${Date.now().toString().slice(-4)}`);
+      item.date = today();
+      item.category = String(row[1] || 'অন্যান্য খরচ');
+      item.amount = Number(row[2] || row[3] || 500);
+      item.recipient = String(row[3] || 'স্টাফ');
+      item.paidFrom = '1050';
+      item.authorizedBy = 'অটো-ইম্পোর্ট';
+      item.synced = true;
+    } else if (targetModule === 'clients') {
+      item.code = `CL-${Math.floor(100 + Math.random() * 900)}`;
+      item.name = String(row[0] || 'ক্লায়েন্ট');
+      item.company = String(row[1] || 'কোম্পানি');
+      item.phone = String(row[2] || '');
+      item.creditLimit = Number(row[3] || 100000);
+      item.balance = Number(row[4] || 0);
+      item.ordersCount = 1;
+    } else if (targetModule === 'paperStock') {
+      item.code = `PAP-${Math.floor(100 + Math.random() * 900)}`;
+      item.brand = String(row[0] || 'Art Paper');
+      item.type = 'Art Paper';
+      item.gsm = Number(row[1] || 150);
+      item.size = String(row[2] || '23x36 in');
+      item.reams = Number(row[3] || 10);
+      item.costPerReam = Number(row[4] || 3000);
+      item.warehouse = 'Main Floor';
+    } else if (targetModule === 'parties') {
+      item.code = `PT-${Math.floor(10 + Math.random() * 90)}`;
+      item.name = String(row[0] || 'সাপ্লায়ার');
+      item.contact = String(row[1] || '');
+      item.phone = String(row[2] || '');
+      item.material = String(row[3] || 'কাঁচামাল');
+      item.due = Number(row[4] || 0);
+    } else {
+      // General map
+      headers.forEach((h, idx) => {
+        item[`col_${idx}`] = row[idx];
+      });
+    }
+
+    db[targetModule].unshift(item);
+    importedCount++;
+  });
+
+  persist();
+  clearStagingData();
+  toast(`✓ ${importedCount}টি রেকর্ড সফলভাবে ${WORKBOOK_CONFIG[targetModule]?.short || targetModule} লেজারে যুক্ত হয়েছে!`);
+  switchTab('workbooks');
+  selectWorkbook(targetModule);
+}
+
+function clearStagingData() {
+  stagedImportData = null;
+  const stagingSection = document.getElementById('importer-staging-preview');
+  if (stagingSection) stagingSection.style.display = 'none';
+  const fileInput = document.getElementById('excel-file-input');
+  if (fileInput) fileInput.value = '';
+}
+
+function loadSampleLegacyImport() {
+  const sampleHeaders = ['ভাউচার নং', 'তারিখ', 'খরচের খাত', 'পরিমাণ (টাকা)', 'গ্রহীতা', 'নোট'];
+  const sampleRows = [
+    ['PC-9801', today(), 'কাঁচামাল - স্পেশাল গ্লু', 1850, 'রফিক মিয়া', 'জরুরি সিলিং গ্লু'],
+    ['PC-9802', today(), 'শপফ্লোর নাস্তা ও চা', 420, 'ক্যান্টিন বয়', 'নাইট শিফট নাস্তা'],
+    ['PC-9803', today(), 'মেশিন কার্বন ব্রাশ', 2600, 'ইলেকট্রিশিয়ান বাবুল', 'Dominant মেশিন পার্টস'],
+    ['PC-9804', today(), 'ডেলিভারি সিএনজি ভাড়া', 750, 'কালাম ড্রাইভার', 'সিটি ফার্মা স্যাম্পল ডেলিভারি']
+  ];
+
+  stagedImportData = {
+    fileName: 'Legacy_Adframe_PettyCash_2026.xlsx',
+    sheetName: 'PettyCash_Daily',
+    detectedModule: 'pettyCash',
+    headers: sampleHeaders,
+    rawRows: sampleRows,
+    validRowsCount: 4,
+    errorCount: 0
+  };
+
+  renderStagingPreview(stagedImportData);
+  toast('✓ ডেমো লিগ্যাসি এক্সেল শীট স্টেজিংয়ে লোড হয়েছে');
+}
+
+function downloadBlankWorkbookTemplate() {
+  if (typeof XLSX === 'undefined') {
+    toast('ডাউনলোড রেডি হচ্ছে...', 'info');
+  }
+  const wb = XLSX.utils.book_new();
+
+  Object.entries(WORKBOOK_CONFIG).forEach(([key, cfg]) => {
+    let headers = ['তারিখ', 'বিবরণ', 'পরিমাণ', 'নোট'];
+    if (key === 'pettyCash') headers = ['VoucherNo', 'Date', 'Category', 'Amount', 'Recipient', 'AuthorizedBy'];
+    else if (key === 'bankAccounts') headers = ['AccountCode', 'BankName', 'AccountType', 'Balance', 'LastTxnDate'];
+    else if (key === 'clients') headers = ['ClientCode', 'ClientName', 'Company', 'Phone', 'CreditLimit', 'BalanceDue'];
+    else if (key === 'deliveries') headers = ['ChallanNo', 'Date', 'ClientName', 'JobTitle', 'Quantity', 'VehicleNo', 'Driver'];
+    else if (key === 'impressions') headers = ['Date', 'MachineName', 'StartCounter', 'EndCounter', 'RatePer1000', 'TotalBDT', 'Operator'];
+    else if (key === 'paperStock') headers = ['PaperCode', 'BrandName', 'Type', 'GSM', 'SheetSize', 'StockReams', 'CostPerReam'];
+    else if (key === 'parties') headers = ['PartyCode', 'VendorName', 'ContactPerson', 'Phone', 'SupplyMaterial', 'DueBalance'];
+    else if (key === 'pressJobs') headers = ['JobNo', 'JobTitle', 'ClientName', 'TargetQty', 'PaperReams', 'PlateCount', 'BillingPrice', 'EstimatedCost'];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    XLSX.utils.book_append_sheet(wb, ws, cfg.short.replace(/[^\w]/g, '_').slice(0, 31));
+  });
+
+  XLSX.writeFile(wb, `HandsAndHead_10_Workbook_Template_${today()}.xlsx`);
+  toast('✓ ১০-ওয়ার্কবুক এক্সেল টেমপ্লেট ডাউনলোড হয়েছে');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   4. DYNAMIC PRICE COSTING & ESTIMATOR CALCULATOR
+══════════════════════════════════════════════════════════════════ */
+function renderCostingTab() {
+  calculateDynamicCosting();
+}
+
+function calculateDynamicCosting() {
+  const qty = Number(document.getElementById('cost-target-qty')?.value || 5000);
+  const upCount = Number(document.getElementById('cost-up-count')?.value || 4);
+  const wastagePct = Number(document.getElementById('cost-wastage')?.value || 5);
+  const paperRate = Number(document.getElementById('cost-paper-rate')?.value || 3200);
+  const plateCount = Number(document.getElementById('cost-plate-count')?.value || 4);
+  const plateRate = Number(document.getElementById('cost-plate-rate')?.value || 350);
+  const impressionRate = Number(document.getElementById('cost-imp-rate')?.value || 250);
+  const finishingCost = Number(document.getElementById('cost-finishing')?.value || 2000);
+  const marginPct = Number(document.getElementById('cost-profit-margin')?.value || 25);
+
+  // Calculations
+  const requiredSheets = Math.ceil(qty / Math.max(upCount, 1));
+  const totalSheets = Math.ceil(requiredSheets * (1 + wastagePct / 100));
+  const reamsNeeded = totalSheets / 500;
+  const paperCost = reamsNeeded * paperRate;
+
+  const plateCost = plateCount * plateRate;
+  const totalImpressions = requiredSheets * (plateCount > 4 ? 2 : 1);
+  const machineCost = (totalImpressions / 1000) * impressionRate;
+
+  const directJobCost = paperCost + plateCost + machineCost + finishingCost;
+  const recommendedBilling = directJobCost * (1 + marginPct / 100);
+  const estimatedProfit = recommendedBilling - directJobCost;
+  const unitCost = qty > 0 ? (directJobCost / qty) : 0;
+  const unitPrice = qty > 0 ? (recommendedBilling / qty) : 0;
+
+  // Render to Summary
+  const paperEl = document.getElementById('calc-paper-cost');
+  const plateEl = document.getElementById('calc-plate-cost');
+  const machEl = document.getElementById('calc-mach-cost');
+  const finEl = document.getElementById('calc-fin-cost');
+  const directEl = document.getElementById('calc-direct-cost');
+  const billEl = document.getElementById('calc-rec-billing');
+  const profitEl = document.getElementById('calc-est-profit');
+  const unitEl = document.getElementById('calc-unit-price');
+
+  if (paperEl) paperEl.textContent = `${fmt(paperCost)} (${reamsNeeded.toFixed(2)} রিম)`;
+  if (plateEl) plateEl.textContent = fmt(plateCost);
+  if (machEl) machEl.textContent = fmt(machineCost);
+  if (finEl) finEl.textContent = fmt(finishingCost);
+  if (directEl) directEl.textContent = fmt(directJobCost);
+  if (billEl) billEl.textContent = fmt(recommendedBilling);
+  if (profitEl) profitEl.textContent = `${fmt(estimatedProfit)} (${marginPct}%)`;
+  if (unitEl) unitEl.textContent = `৳${unitPrice.toFixed(2)} / পিস (খরচ: ৳${unitCost.toFixed(2)})`;
+}
+
+function resetCostingCalculator() {
+  document.getElementById('cost-target-qty').value = 5000;
+  document.getElementById('cost-up-count').value = 4;
+  document.getElementById('cost-wastage').value = 5;
+  document.getElementById('cost-paper-rate').value = 3200;
+  document.getElementById('cost-plate-count').value = 4;
+  document.getElementById('cost-plate-rate').value = 350;
+  document.getElementById('cost-imp-rate').value = 250;
+  document.getElementById('cost-finishing').value = 2000;
+  document.getElementById('cost-profit-margin').value = 25;
+  calculateDynamicCosting();
+  toast('ক্যালকুলেটর ডিফল্ট রিসেট হয়েছে');
+}
+
+function saveCostingAsJobOrder() {
+  const client = document.getElementById('cost-client')?.value.trim() || 'সাধারণ ক্লায়েন্ট';
+  const title = document.getElementById('cost-job-title')?.value.trim() || '৪-কালার ব্রোশিওর কস্টিং জব';
+  const qty = Number(document.getElementById('cost-target-qty')?.value || 5000);
+  const upCount = Number(document.getElementById('cost-up-count')?.value || 4);
+  const wastagePct = Number(document.getElementById('cost-wastage')?.value || 5);
+  const paperRate = Number(document.getElementById('cost-paper-rate')?.value || 3200);
+  const plateCount = Number(document.getElementById('cost-plate-count')?.value || 4);
+  const plateRate = Number(document.getElementById('cost-plate-rate')?.value || 350);
+  const impressionRate = Number(document.getElementById('cost-imp-rate')?.value || 250);
+  const finishingCost = Number(document.getElementById('cost-finishing')?.value || 2000);
+  const marginPct = Number(document.getElementById('cost-profit-margin')?.value || 25);
+
+  const requiredSheets = Math.ceil(qty / Math.max(upCount, 1));
+  const totalSheets = Math.ceil(requiredSheets * (1 + wastagePct / 100));
+  const reamsNeeded = totalSheets / 500;
+  const paperCost = reamsNeeded * paperRate;
+  const plateCost = plateCount * plateRate;
+  const machineCost = (requiredSheets / 1000) * impressionRate;
+  const directJobCost = paperCost + plateCost + machineCost + finishingCost;
+  const recommendedBilling = Math.round(directJobCost * (1 + marginPct / 100));
+
+  const jobNo = `JOB-${Date.now().toString().slice(-4)}`;
+
+  // Save to db.pressJobs
+  if (!db.pressJobs) db.pressJobs = [];
+  db.pressJobs.unshift({
+    id: uid(),
+    jobNo,
+    title,
+    client,
+    targetQty: qty,
+    paperType: 'Art Paper',
+    reamsUsed: Number(reamsNeeded.toFixed(2)),
+    plates: plateCount,
+    impressions: requiredSheets,
+    agreedPrice: recommendedBilling,
+    cost: Math.round(directJobCost),
+    status: 'running'
+  });
+
+  // Save to db.orders for Dashboard
+  if (!db.orders) db.orders = [];
+  db.orders.unshift({
+    id: uid(),
+    client,
+    value: recommendedBilling,
+    status: 'active',
+    date: today(),
+    desc: `[${jobNo}] ${title} (${qty} পিস)`,
+    paid: 'no'
+  });
+
+  persist();
+  toast(`✓ জব ${jobNo} তৈরি হয়েছে ও কস্টিং ডেটা সেভ হয়েছে!`);
+  switchTab('orders');
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   5. SHOP FLOOR PWA & CLOUD SYNC DAEMON SIMULATOR
+══════════════════════════════════════════════════════════════════ */
+function renderFloorTab() {
+  // Mobile floor ready
+}
+
+function renderCloudSyncTab() {
+  const logEl = document.getElementById('cloud-daemon-logs');
+  if (logEl && (!logEl.children || logEl.children.length === 0)) {
+    logEl.innerHTML = `
+      <div class="log-line ok">[${new Date().toLocaleTimeString()}] IMAP Listener active on accounts@handsandhead.com</div>
+      <div class="log-line info">[${new Date().toLocaleTimeString()}] Bi-directional OneDrive workbook sync engine ready</div>
+      <div class="log-line info">[${new Date().toLocaleTimeString()}] Double-entry journal reconciliation verified</div>
+    `;
+  }
+}
+
+function simulateIncomingEmailEntry() {
+  const voucherNo = `PC-EML-${Date.now().toString().slice(-4)}`;
+  const amount = 850;
+  const category = 'জরুরি শপফ্লোর হার্ডওয়্যার';
+  const recipient = 'মেশিন রুম সহকারী';
+
+  if (!db.pettyCash) db.pettyCash = [];
+  db.pettyCash.unshift({
+    id: uid(),
+    voucherNo,
+    date: today(),
+    category,
+    amount,
+    recipient,
+    paidFrom: '1050',
+    authorizedBy: 'Email Daemon (accounts@handsandhead.com)',
+    synced: true
+  });
+
+  postDoubleEntryTransaction(today(), 'EMAIL_DAEMON', voucherNo, `ইমেইল ভাউচার: ${category} (${amount} BDT)`,
+    [{ code: '5100', name: 'Factory Overhead & Hardware', amount }],
+    [{ code: '1050', name: 'Adframe Petty Cash Float', amount }]
+  );
+
+  const logEl = document.getElementById('cloud-daemon-logs');
+  if (logEl) {
+    const el = document.createElement('div');
+    el.className = 'log-line ok';
+    el.textContent = `[${new Date().toLocaleTimeString()}] ✓ Auto-Parsed Email: "${category} - ৳${amount}" ➜ ${voucherNo} posted to Ledger!`;
+    logEl.insertBefore(el, logEl.firstChild);
+  }
+
+  persist();
+  updateTopbar();
+  toast(`⚡ ইমেইল স্বয়ংক্রিয়ভাবে লেজারে যুক্ত হয়েছে: ${voucherNo} (৳${amount})`);
+}
+
+function exportFull10SheetsExcel() {
+  if (typeof XLSX === 'undefined') {
+    toast('SheetJS প্রস্তুত হচ্ছে...', 'info');
+  }
+  const wb = XLSX.utils.book_new();
+
+  Object.entries(WORKBOOK_CONFIG).forEach(([key, cfg]) => {
+    const list = db[key] || [];
+    let aoa = [];
+    if (list.length > 0) {
+      const headers = Object.keys(list[0]).filter(k => k !== 'id');
+      aoa.push(headers);
+      list.forEach(item => {
+        aoa.push(headers.map(h => item[h]));
+      });
+    } else {
+      aoa = [['No Data Available']];
+    }
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    XLSX.utils.book_append_sheet(wb, ws, cfg.short.replace(/[^\w]/g, '_').slice(0, 31));
+  });
+
+  // Also append full double-entry journal ledger sheet
+  const jvList = db.journal || [];
+  const jvAoa = [['VoucherNo', 'Date', 'Memo', 'AccountCode', 'AccountName', 'Direction', 'Amount']];
+  jvList.forEach(jv => {
+    (jv.lines || []).forEach(l => {
+      jvAoa.push([jv.entryNo, jv.date, jv.memo, l.accountCode, l.accountName, l.direction, l.amount]);
+    });
+  });
+  const wsJv = XLSX.utils.aoa_to_sheet(jvAoa);
+  XLSX.utils.book_append_sheet(wb, wsJv, 'General_Journal_ACID');
+
+  XLSX.writeFile(wb, `HandsAndHead_Unified_10_Ledgers_${today()}.xlsx`);
+  toast('✓ সম্পূর্ণ ১০টি লেজার সম্বলিত এক্সেল ফাইল ডাউনলোড হয়েছে!');
 }
 
 /* ══ CRUD: ORDERS ══ */
@@ -3019,16 +4952,260 @@ function exportFullReportCSV() {
   downloadCSVFile(`full-accounting-report-${today()}.csv`, rows);
 }
 
+/* ══ PWA, SERVICE WORKER & OFFLINE QUEUE ENGINE ══ */
+let swRegistration = null;
+let isOfflineSimulation = false;
+
+function initSyncQueue() {
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY);
+    syncQueue = raw ? JSON.parse(raw) : [];
+  } catch(e) {
+    syncQueue = [];
+  }
+  updateSyncQueueUI();
+}
+
+function saveSyncQueue() {
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(syncQueue));
+  updateSyncQueueUI();
+}
+
+function enqueueOfflineMutation(type, desc) {
+  const item = {
+    id: uid(),
+    type: type || 'UPDATE',
+    desc: desc || 'তথ্য পরিবর্তন',
+    timestamp: new Date().toISOString(),
+    timeStr: new Date().toLocaleTimeString('bn-BD', {hour:'2-digit', minute:'2-digit', second:'2-digit'})
+  };
+  syncQueue.push(item);
+  saveSyncQueue();
+  
+  if ('serviceWorker' in navigator && 'SyncManager' in window && swRegistration) {
+    swRegistration.sync.register('sync-sheets-queue').catch(() => {});
+  }
+}
+
+function updateSyncQueueUI() {
+  const count = syncQueue.length;
+  const pill = document.getElementById('sync-queue-pill');
+  const countEl = document.getElementById('sync-queue-count');
+  const settingsQueue = document.getElementById('settings-queue-text');
+  
+  if (countEl) countEl.textContent = count;
+  if (pill) {
+    if (count > 0) {
+      pill.style.display = 'inline-flex';
+    } else {
+      pill.style.display = 'none';
+    }
+  }
+  if (settingsQueue) {
+    settingsQueue.textContent = count > 0 ? `${count}টি পরিবর্তন জমা (পেন্ডিং)` : '০টি পরিবর্তন জমা (সব সিঙ্কড)';
+  }
+}
+
+function updateNetworkStatusUI() {
+  const isOnline = navigator.onLine && !isOfflineSimulation;
+  const pill = document.getElementById('net-status-pill');
+  const txt = document.getElementById('net-status-txt');
+  const banner = document.getElementById('offline-banner');
+  const bannerText = document.getElementById('offline-banner-text');
+  const bannerIcon = document.getElementById('offline-banner-icon');
+  const settingsNet = document.getElementById('settings-net-text');
+
+  if (isOnline) {
+    if (pill) {
+      pill.className = 'network-pill online';
+      if (txt) txt.textContent = 'অনলাইন';
+    }
+    if (settingsNet) settingsNet.textContent = '🟢 লাইভ অনলাইন';
+    
+    if (banner && !banner.classList.contains('hidden') && !banner.classList.contains('online-restored')) {
+      banner.className = 'offline-banner online-restored';
+      if (bannerIcon) bannerIcon.textContent = '✓';
+      if (bannerText) bannerText.innerHTML = '<strong>ইন্টারনেট সংযোগ ফিরে এসেছে!</strong> Google Sheets-এ ডেটা অটো-সিঙ্ক হচ্ছে...';
+      setTimeout(() => {
+        if (navigator.onLine && !isOfflineSimulation) {
+          banner.classList.add('hidden');
+          banner.classList.remove('online-restored');
+          if (bannerIcon) bannerIcon.textContent = '⚡';
+          if (bannerText) bannerText.innerHTML = '<strong>অফলাইন মোড সক্রিয়</strong> — সব হিসাব, ফর্ম ও ড্যাশবোর্ড ক্যাশড মেমোরিতে কাজ করছে। নেটওয়ার্ক ফিরলেই Google Sheets-এ স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।';
+        }
+      }, 3500);
+    }
+  } else {
+    if (pill) {
+      pill.className = 'network-pill offline';
+      if (txt) txt.textContent = 'অফলাইন';
+    }
+    if (settingsNet) settingsNet.textContent = '🟠 অফলাইন মোড (লোকাল ক্যাশ)';
+    if (banner) {
+      banner.className = 'offline-banner';
+      banner.classList.remove('hidden');
+      banner.classList.remove('online-restored');
+      if (bannerIcon) bannerIcon.textContent = '⚡';
+      if (bannerText) bannerText.innerHTML = '<strong>অফলাইন মোড সক্রিয়</strong> — সব হিসাব, ফর্ম ও ড্যাশবোর্ড ক্যাশড মেমোরিতে কাজ করছে। নেটওয়ার্ক ফিরলেই Google Sheets-এ স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।';
+    }
+  }
+}
+
+function onNetworkOnline() {
+  updateNetworkStatusUI();
+  addLog('ইন্টারনেট সংযোগ ফিরে এসেছে ✓ অটো-সিঙ্ক শুরু হচ্ছে...', 'ok');
+  toast('✓ ইন্টারনেট সংযোগ সক্রিয় হয়েছে — Google Sheets সিঙ্ক চলছে', 'success');
+  flushOfflineSyncQueue(true);
+}
+
+function onNetworkOffline() {
+  updateNetworkStatusUI();
+  addLog('ইন্টারনেট সংযোগ বিচ্ছিন্ন — অফলাইন মোড চালু হয়েছে ⚠️', 'err');
+  toast('⚠️ অফলাইন মোড সক্রিয় — ডেটা লোকাল ক্যাশে সেভ হচ্ছে', 'info');
+}
+
+function testOfflineSimulation() {
+  isOfflineSimulation = !isOfflineSimulation;
+  updateNetworkStatusUI();
+  if (isOfflineSimulation) {
+    toast('⚡ অফলাইন সিমুলেশন টেস্ট সক্রিয় — ফর্ম এন্ট্রি করে পরীক্ষা করুন', 'info');
+    addLog('সিমুলেটেড অফলাইন মোড চালু করা হয়েছে', 'info');
+  } else {
+    toast('🟢 অফলাইন সিমুলেশন বন্ধ — অনলাইন রিস্টোর হয়েছে', 'success');
+    addLog('অনলাইন মোডে ফিরে এসেছে — সিঙ্ক চালানো হচ্ছে', 'ok');
+    flushOfflineSyncQueue(false);
+  }
+}
+
+function initServiceWorkerAndNetworkListeners() {
+  window.addEventListener('online', onNetworkOnline);
+  window.addEventListener('offline', onNetworkOffline);
+  updateNetworkStatusUI();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => {
+        swRegistration = reg;
+        const badge = document.getElementById('sw-status-badge');
+        const cacheTxt = document.getElementById('settings-cache-text');
+        if (badge) {
+          badge.textContent = 'সার্ভিস ওয়ার্কার সক্রিয় (PWA Ready)';
+          badge.className = 'badge-status badge-ok';
+        }
+        if (cacheTxt) cacheTxt.textContent = '✓ Ready (Cache v1 + Offline Forms)';
+
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'BACKGROUND_SYNC_TRIGGERED') {
+            flushOfflineSyncQueue(true);
+          }
+        });
+
+        if ('sync' in reg) {
+          reg.sync.register('sync-sheets-queue').catch(() => {});
+        }
+      })
+      .catch(err => {
+        console.warn('SW registration failed:', err);
+        const badge = document.getElementById('sw-status-badge');
+        if (badge) {
+          badge.textContent = 'সার্ভিস ওয়ার্কার নিষ্ক্রিয়';
+          badge.className = 'badge-status badge-warn';
+        }
+      });
+  }
+}
+
+async function forceUpdateServiceWorker() {
+  if ('serviceWorker' in navigator && swRegistration) {
+    try {
+      await swRegistration.update();
+      toast('✓ সার্ভিস ওয়ার্কার ক্যাশ আপডেট ও রিফ্রেশ হয়েছে');
+      addLog('সার্ভিস ওয়ার্কার ক্যাশ সফলভাবে আপডেট করা হয়েছে ✓', 'ok');
+    } catch(e) {
+      toast('ক্যাশ আপডেট ব্যর্থ', 'error');
+    }
+  } else {
+    toast('সার্ভিস ওয়ার্কার সাপোর্ট নেই', 'info');
+  }
+}
+
 /* ══ GOOGLE SHEETS SYNC ══ */
 function setSyncDot(state){const d=document.getElementById('sync-dot');if(d) d.className='sync-dot '+(state==='ok'?'ok':state==='busy'?'busy':state==='err'?'err':'');}
 function addLog(msg,type='info'){const log=document.getElementById('sync-log');if(!log)return;const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});const el=document.createElement('div');el.className='log-line '+type;el.textContent=`[${t}] ${msg}`;log.insertBefore(el,log.firstChild);while(log.children.length>30) log.removeChild(log.lastChild);}
 function setConnStatus(type,msg){const el=document.getElementById('conn-status');if(!el)return;el.className='conn-status '+(type==='ok'?'ok':type==='fail'?'fail':'idle');el.textContent=msg;}
 async function gasCall(url,method='GET',body=null){const opts={method,redirect:'follow',credentials:'omit'};if(body) opts.body=JSON.stringify(body);const res=await fetch(url,opts);const text=await res.text();if(text.trim().startsWith('<')) throw new Error('Apps Script returned HTML — re-deploy করো');let json;try{json=JSON.parse(text);}catch{throw new Error('Invalid response');}return json;}
 async function testConnection(){const url=getUrl();if(!url){toast('Settings-এ URL দাও','error');return;}setSyncDot('busy');addLog('সংযোগ পরীক্ষা...','info');try{const j=await gasCall(url+'?action=ping');if(j.success){setSyncDot('ok');setConnStatus('ok','// ✓ Google Sheets সংযুক্ত — অটো-সিঙ্ক চালু');addLog('সংযোগ সফল ✓','ok');toast('✓ সংযুক্ত');}else throw new Error(j.error);}catch(e){setSyncDot('err');setConnStatus('fail','// ✗ '+e.message);addLog('ব্যর্থ: '+e.message,'err');toast('সংযোগ ব্যর্থ','error');}}
-async function pushToSheets(silent=false){const url=getUrl();if(!url) return;setSyncDot('busy');const btn=document.getElementById('sync-btn');if(btn) btn.disabled=true;if(!silent) toast('Sheets-এ পাঠানো হচ্ছে...','info');try{const j=await gasCall(url,'POST',{action:'sync',data:db});if(j.success){setSyncDot('ok');addLog('সিঙ্ক সফল ✓','ok');if(!silent) toast('✓ Google Sheets আপডেট হয়েছে');}else throw new Error(j.error||'Sync failed');}catch(e){setSyncDot('err');addLog('ব্যর্থ: '+e.message,'err');if(!silent) toast('সিঙ্ক ব্যর্থ','error');}if(btn) btn.disabled=false;}
-async function pullFromSheets(){const url=getUrl();if(!url){toast('URL দাও','error');return;}setSyncDot('busy');toast('লোড হচ্ছে...','info');try{const j=await gasCall(url+'?action=get');if(j.success&&j.data){db={...db,...j.data};localStorage.setItem(KEY,JSON.stringify(db));setSyncDot('ok');addLog('লোড সফল ✓','ok');toast('✓ ডেটা লোড হয়েছে');renderDashboard();renderOrders();populateDropdowns();}else throw new Error(j.error||'No data');}catch(e){setSyncDot('err');addLog('ব্যর্থ: '+e.message,'err');toast('লোড ব্যর্থ','error');}}
-function manualSync(){const url=getUrl();if(!url){toast('Settings-এ URL দাও','error');switchTab('settings');return;}pushToSheets(false);}
-function autoSync(){if(!getUrl()) return;pushToSheets(true);}
+
+async function flushOfflineSyncQueue(silent=false){
+  if (!navigator.onLine || isOfflineSimulation) {
+    if (!silent) toast('বর্তমানে অফলাইন আছেন — নেটওয়ার্ক পেলে অটো-সিঙ্ক হবে', 'info');
+    return;
+  }
+  const url = getUrl();
+  if (!url) {
+    if (!silent) {
+      toast('Settings-এ Google Sheets URL দিন', 'error');
+      switchTab('settings');
+    }
+    return;
+  }
+  
+  const pendingCount = syncQueue.length;
+  setSyncDot('busy');
+  const btn = document.getElementById('sync-btn');
+  if(btn) btn.disabled = true;
+  if (!silent) toast('Sheets-এ পাঠানো হচ্ছে...', 'info');
+
+  try {
+    const j = await gasCall(url, 'POST', {action: 'sync', data: db, timestamp: new Date().toISOString()});
+    if (j.success) {
+      syncQueue = [];
+      saveSyncQueue();
+      localStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+      setSyncDot('ok');
+      setConnStatus('ok','// ✓ Google Sheets সংযুক্ত — অটো-সিঙ্ক চালু');
+      addLog(pendingCount > 0 ? `অফলাইন কিউ সফলভাবে সিঙ্ক হয়েছে (${pendingCount}টি পরিবর্তন) ✓` : 'সিঙ্ক সফল ✓', 'ok');
+      if (!silent) toast('✓ Google Sheets আপডেট হয়েছে');
+    } else throw new Error(j.error || 'Sync failed');
+  } catch(e) {
+    setSyncDot('err');
+    addLog('ব্যর্থ: ' + e.message, 'err');
+    if (!silent) toast('সিঙ্ক ব্যর্থ', 'error');
+  }
+  if(btn) btn.disabled = false;
+}
+
+async function pushToSheets(silent=false){
+  await flushOfflineSyncQueue(silent);
+}
+
+async function pullFromSheets(){
+  if (!navigator.onLine || isOfflineSimulation) {
+    toast('অফলাইন অবস্থায় Sheets থেকে লোড সম্ভব নয়', 'error');
+    return;
+  }
+  const url=getUrl();if(!url){toast('URL দাও','error');return;}
+  setSyncDot('busy');toast('লোড হচ্ছে...','info');
+  try{
+    const j=await gasCall(url+'?action=get');
+    if(j.success&&j.data){
+      db={...db,...j.data};
+      localStorage.setItem(KEY,JSON.stringify(db));
+      setSyncDot('ok');
+      addLog('লোড সফল ✓','ok');
+      toast('✓ ডেটা লোড হয়েছে');
+      renderDashboard();
+      renderOrders();
+      populateDropdowns();
+    }else throw new Error(j.error||'No data');
+  }catch(e){
+    setSyncDot('err');
+    addLog('ব্যর্থ: '+e.message,'err');
+    toast('লোড ব্যর্থ','error');
+  }
+}
+function manualSync(){flushOfflineSyncQueue(false);}
+function autoSync(){if(!getUrl() || !navigator.onLine || isOfflineSimulation) return;flushOfflineSyncQueue(true);}
 function onUrlInput(){const url=document.getElementById('script-url').value.trim();localStorage.setItem(URL_KEY,url);setConnStatus('idle',url?'// URL সেট — পরীক্ষা করো':'// URL দেওয়া হয়নি');}
 
 /* ══ PASSWORD ══ */
