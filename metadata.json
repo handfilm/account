@@ -1,0 +1,8 @@
+{
+  "name": "H&H - Account Sync",
+  "description": "Complete business and personal finance management system with order tracking, expense management, bank loans, smart insights, and Google Sheets account sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
